@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse } from "lucide-react";
+import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
 
@@ -66,13 +66,13 @@ function shortDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function HistoryBarChart({ data, dataKey, colorForEntry, unit = "" }) {
+function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160, showAxis = true, maxBarSize = 28 }) {
   if (!data || data.length === 0) return null;
   const chartData = data.map((d) => ({ ...d, _label: shortDate(d.created_at) }));
   return (
-    <ResponsiveContainer width="100%" height={160}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={chartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-        <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
+        {showAxis && <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />}
         <YAxis hide />
         <Tooltip
           cursor={{ fill: COLORS.surfaceAlt }}
@@ -80,7 +80,7 @@ function HistoryBarChart({ data, dataKey, colorForEntry, unit = "" }) {
           formatter={(value) => [`${value}${unit}`, ""]}
           labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
         />
-        <Bar dataKey={dataKey} radius={[6, 6, 0, 0]} maxBarSize={28}>
+        <Bar dataKey={dataKey} radius={[6, 6, 0, 0]} maxBarSize={maxBarSize}>
           {chartData.map((entry, i) => (
             <Cell key={i} fill={colorForEntry(entry)} />
           ))}
@@ -153,6 +153,7 @@ function SugarSummaryCard({ reading }) {
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [page, setPage] = useState("dashboard"); // 'dashboard' | 'weightHistory'
   const [profile, setProfile] = useState(null);
   const [authMode, setAuthMode] = useState("signin"); // 'signin' | 'signup'
   const [name, setName] = useState("");
@@ -418,6 +419,40 @@ export default function App() {
     );
   }
 
+  // ---------- WEIGHT HISTORY PAGE ----------
+  if (page === "weightHistory") {
+    return (
+      <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
+        <div className="max-w-2xl mx-auto p-5">
+          <button
+            onClick={() => setPage("dashboard")}
+            className="flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl mb-5"
+            style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <Scale size={16} color={COLORS.primary} />
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Body weight history</span>
+            </div>
+            {weightReadings.length > 0 ? (
+              <HistoryBarChart
+                data={weightReadings}
+                dataKey="value"
+                unit={` ${weightReadings[0]?.unit || "kg"}`}
+                colorForEntry={() => COLORS.primary}
+                height={260}
+              />
+            ) : (
+              <p className="text-sm" style={{ color: COLORS.inkSoft }}>No weight readings yet.</p>
+            )}
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   // ---------- DASHBOARD ----------
   return (
     <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
@@ -495,15 +530,15 @@ export default function App() {
               <Scale size={16} color={COLORS.primary} />
               <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Body weight</span>
             </div>
-            <div className="rounded-2xl py-6 flex flex-col items-center" style={{ background: COLORS.surfaceAlt }}>
-              <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT WEIGH-IN</span>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-5xl font-bold">
-                {latestWeight.value}<span className="text-lg" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> {latestWeight.unit}</span>
-              </div>
-              <div className="flex items-center gap-3 mt-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col items-center justify-center">
+                <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                  {latestWeight.value}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> {latestWeight.unit}</span>
+                </div>
                 {prevWeight && (
                   <span
-                    className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                    className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2"
                     style={{
                       background: (latestWeight.value >= prevWeight.value ? COLORS.elevated : COLORS.normal) + "1a",
                       color: latestWeight.value >= prevWeight.value ? COLORS.elevated : COLORS.normal,
@@ -512,7 +547,22 @@ export default function App() {
                     {latestWeight.value > prevWeight.value ? "+" : ""}{(latestWeight.value - prevWeight.value).toFixed(1)} {latestWeight.unit} vs last
                   </span>
                 )}
-                <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(latestWeight.created_at)} · {daysAgoLabel(latestWeight.created_at)}</span>
+                <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestWeight.created_at)} · {daysAgoLabel(latestWeight.created_at)}</span>
+              </div>
+              <div
+                onClick={() => setPage("weightHistory")}
+                className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]"
+              >
+                <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+                <HistoryBarChart
+                  data={weightReadings.slice(-5)}
+                  dataKey="value"
+                  unit={` ${latestWeight.unit}`}
+                  colorForEntry={() => COLORS.primary}
+                  height={110}
+                  showAxis={false}
+                  maxBarSize={20}
+                />
               </div>
             </div>
           </Card>
@@ -724,18 +774,6 @@ export default function App() {
                 );
               })}
             </div>
-          </Card>
-        )}
-
-        {weightReadings.length > 0 && (
-          <Card>
-            <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Body weight history</span>
-            <HistoryBarChart
-              data={weightReadings}
-              dataKey="value"
-              unit={` ${weightReadings[0]?.unit || "kg"}`}
-              colorForEntry={() => COLORS.primary}
-            />
           </Card>
         )}
 
