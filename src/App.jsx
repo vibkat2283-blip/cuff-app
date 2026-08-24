@@ -88,6 +88,20 @@ const MEDICAL_FIELDS = [
   { key: "mental_health_history", label: "Mental-health history" },
 ];
 
+const FAMILY_HISTORY_FIELDS = [
+  { key: "family_diabetes", label: "Diabetes" },
+  { key: "family_hypertension", label: "Hypertension" },
+  { key: "family_cad_mi", label: "CAD / MI / Heart attack" },
+  { key: "family_stroke", label: "Stroke" },
+  { key: "family_cancer", label: "Cancer" },
+  { key: "family_thyroid_disease", label: "Thyroid disease" },
+  { key: "family_kidney_disease", label: "Kidney disease" },
+  { key: "family_liver_disease", label: "Liver disease" },
+  { key: "family_dementia", label: "Dementia / Memory loss" },
+  { key: "family_obesity", label: "Obesity" },
+  { key: "family_longevity", label: "Longevity / Age at death" },
+];
+
 function formatDOBForInput(isoDate) {
   if (!isoDate) return "";
   const d = new Date(isoDate + "T00:00:00");
@@ -221,6 +235,9 @@ export default function App() {
   );
   const [medicalDraft, setMedicalDraft] = useState("");
   const [familyDraft, setFamilyDraft] = useState("");
+  const [familyFields, setFamilyFields] = useState(
+    Object.fromEntries(FAMILY_HISTORY_FIELDS.map((f) => [f.key, ""]))
+  );
   const [medicalSaved, setMedicalSaved] = useState(false);
   const [familySaved, setFamilySaved] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -279,6 +296,7 @@ export default function App() {
         setMedicalDraft(data.medical_background || "");
         setMedicalFields(Object.fromEntries(MEDICAL_FIELDS.map((f) => [f.key, data[f.key] || ""])));
         setFamilyDraft(data.family_history || "");
+        setFamilyFields(Object.fromEntries(FAMILY_HISTORY_FIELDS.map((f) => [f.key, data[f.key] || ""])));
         setPersonalDraft({
           first_name: data.first_name || "",
           last_name: data.last_name || "",
@@ -458,7 +476,7 @@ export default function App() {
   };
 
   const saveFamilyHistory = async () => {
-    const { data } = await supabase.from("profiles").update({ family_history: familyDraft }).eq("id", profile.id).select().single();
+    const { data } = await supabase.from("profiles").update({ ...familyFields, family_history: familyDraft }).eq("id", profile.id).select().single();
     if (data) setProfile(data);
     setFamilySaved(true);
     setTimeout(() => setFamilySaved(false), 1800);
@@ -1161,14 +1179,32 @@ export default function App() {
 
             {profileSubTab === "family" && (
               <>
-                <textarea
-                  value={familyDraft}
-                  onChange={(e) => setFamilyDraft(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none"
-                  style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
-                  placeholder="Family history of heart disease, diabetes, cancer, or other relevant conditions..."
-                />
+                {FAMILY_HISTORY_FIELDS.map((f) => (
+                  <div className="mb-3" key={f.key}>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>{f.label}</label>
+                    <textarea
+                      value={familyFields[f.key]}
+                      onChange={(e) => setFamilyFields({ ...familyFields, [f.key]: e.target.value })}
+                      rows={2}
+                      className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-none"
+                      style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                      placeholder="None"
+                    />
+                  </div>
+                ))}
+
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Additional notes</label>
+                  <textarea
+                    value={familyDraft}
+                    onChange={(e) => setFamilyDraft(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none"
+                    style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                    placeholder="Family history of heart disease, diabetes, cancer, or other relevant conditions..."
+                  />
+                </div>
+
                 <button onClick={saveFamilyHistory} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
                   {familySaved ? <Check size={14} /> : <Plus size={14} />} {familySaved ? "Saved" : "Save"}
                 </button>
