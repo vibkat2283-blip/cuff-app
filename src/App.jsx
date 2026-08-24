@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft } from "lucide-react";
+import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
 
@@ -16,6 +16,7 @@ const COLORS = {
   elevated: "#C9932E",
   high: "#C4562F",
   crisis: "#A63A2C",
+  muted: "#C3CBC6",
 };
 
 const SUGAR_TYPES = [
@@ -82,7 +83,7 @@ function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160
         />
         <Bar dataKey={dataKey} radius={[6, 6, 0, 0]} maxBarSize={maxBarSize}>
           {chartData.map((entry, i) => (
-            <Cell key={i} fill={colorForEntry(entry)} />
+            <Cell key={i} fill={colorForEntry(entry, i, chartData)} />
           ))}
         </Bar>
       </BarChart>
@@ -154,6 +155,7 @@ function SugarSummaryCard({ reading }) {
 export default function App() {
   const [session, setSession] = useState(null);
   const [page, setPage] = useState("dashboard"); // 'dashboard' | 'weightHistory'
+  const [activeTab, setActiveTab] = useState("home"); // 'home' | 'activity' | 'lab' | 'doctor' | 'profile'
   const [profile, setProfile] = useState(null);
   const [authMode, setAuthMode] = useState("signin"); // 'signin' | 'signup'
   const [name, setName] = useState("");
@@ -454,389 +456,432 @@ export default function App() {
   }
 
   // ---------- DASHBOARD ----------
+  const NAV_ITEMS = [
+    { id: "home", label: "Home", Icon: Home },
+    { id: "activity", label: "Activity", Icon: Activity },
+    { id: "lab", label: "Lab", Icon: FlaskConical },
+    { id: "doctor", label: "Doctor", Icon: Stethoscope },
+    { id: "profile", label: "Profile", Icon: User },
+  ];
+
   return (
     <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
-      <div className="max-w-2xl mx-auto p-5">
-        <div className="flex items-center justify-between mb-7">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
-              <Heart size={16} color="#fff" fill="#ffffff33" />
-            </div>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-xl">Cuff</span>
+      <div className="max-w-2xl mx-auto p-5 pb-28">
+        <div className="flex items-center gap-2.5 mb-7">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
+            <Heart size={16} color="#fff" fill="#ffffff33" />
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium hidden sm:inline" style={{ color: COLORS.ink }}>{profile.name} · {profile.role}</span>
-            <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
-              <LogOut size={14} /> Log out
-            </button>
-          </div>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-xl">Cuff</span>
         </div>
 
-        {profile.role === "Doctor" && (
-          <Card>
-            <label className="text-xs font-semibold block mb-2" style={{ color: COLORS.inkSoft }}>VIEWING PATIENT</label>
-            <select value={selectedPatientId || ""} onChange={(e) => setSelectedPatientId(e.target.value)} className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}>
-              {patients.length === 0 && <option>No patients yet</option>}
-              {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </Card>
-        )}
-
-        <Card>
-          <div className="flex items-center gap-2 mb-4">
-            <FileText size={16} color={COLORS.primary} />
-            <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Prescription</span>
-          </div>
-
-          {profile.role === "Doctor" && (
-            <>
-              <textarea value={prescriptionDraft} onChange={(e) => setPrescriptionDraft(e.target.value)} rows={4} className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} placeholder="Write instructions for your patient..." />
-              <button onClick={savePrescription} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
-                {prescriptionSaved ? <Check size={14} /> : <Plus size={14} />} {prescriptionSaved ? "Saved" : "Save prescription"}
-              </button>
-            </>
-          )}
-
-          <div className="mb-4">
-            <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>CURRENT</span>
-            {currentPrescription ? (
-              <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
-                <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
-                <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(currentPrescription.updated_at)} · {daysAgoLabel(currentPrescription.updated_at)}</div>
-              </div>
-            ) : (
-              <p className="text-sm" style={{ color: COLORS.inkSoft }}>No prescription yet.</p>
-            )}
-          </div>
-
-          {pastPrescriptions.length > 0 && (
-            <div>
-              <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>PAST</span>
-              <div className="flex flex-col gap-2">
-                {pastPrescriptions.map((p) => (
-                  <div key={p.id} className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt, opacity: 0.75 }}>
-                    <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{p.text}</p>
-                    <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(p.updated_at)} · {daysAgoLabel(p.updated_at)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {latestWeight && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Scale size={16} color={COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Body weight</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col items-center justify-center">
-                <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
-                  {latestWeight.value}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> {latestWeight.unit}</span>
+        {activeTab === "home" && (
+          <>
+            {latestWeight ? (
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Scale size={16} color={COLORS.primary} />
+                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Body weight</span>
                 </div>
-                {prevWeight && (
-                  <span
-                    className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2"
-                    style={{
-                      background: (latestWeight.value >= prevWeight.value ? COLORS.elevated : COLORS.normal) + "1a",
-                      color: latestWeight.value >= prevWeight.value ? COLORS.elevated : COLORS.normal,
-                    }}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
+                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                      {latestWeight.value}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> {latestWeight.unit}</span>
+                    </div>
+                    {prevWeight && (
+                      <span
+                        className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2"
+                        style={{
+                          background: (latestWeight.value >= prevWeight.value ? COLORS.elevated : COLORS.normal) + "1a",
+                          color: latestWeight.value >= prevWeight.value ? COLORS.elevated : COLORS.normal,
+                        }}
+                      >
+                        {latestWeight.value > prevWeight.value ? "+" : ""}{(latestWeight.value - prevWeight.value).toFixed(1)} {latestWeight.unit} vs last
+                      </span>
+                    )}
+                    <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestWeight.created_at)} · {daysAgoLabel(latestWeight.created_at)}</span>
+                  </div>
+                  <div
+                    onClick={() => setPage("weightHistory")}
+                    className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]"
                   >
-                    {latestWeight.value > prevWeight.value ? "+" : ""}{(latestWeight.value - prevWeight.value).toFixed(1)} {latestWeight.unit} vs last
-                  </span>
-                )}
-                <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestWeight.created_at)} · {daysAgoLabel(latestWeight.created_at)}</span>
-              </div>
-              <div
-                onClick={() => setPage("weightHistory")}
-                className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]"
-              >
-                <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+                    <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+                    <HistoryBarChart
+                      data={weightReadings.slice(-5)}
+                      dataKey="value"
+                      unit={` ${latestWeight.unit}`}
+                      colorForEntry={(entry, i, arr) => (i === arr.length - 1 ? COLORS.primary : COLORS.muted)}
+                      height={110}
+                      showAxis={false}
+                      maxBarSize={20}
+                    />
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Card>
+                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No data yet. Log your first reading from the Activity or Lab tab.</p>
+              </Card>
+            )}
+          </>
+        )}
+
+        {activeTab === "activity" && (
+          <>
+            {(latestSteps || latestWorkoutWeight || latestWorkoutCardio || latestSleep || latestHeartRate) && (
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Footprints size={16} color={COLORS.primary} />
+                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Activity</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                  <MetricCard label="Steps" value={latestSteps ? latestSteps.value.toLocaleString() : "—"} unit="today" />
+                  <MetricCard label="Sleep" value={latestSleep ? latestSleep.hours : "—"} unit="hrs" />
+                  <MetricCard
+                    label="Heart rate"
+                    value={latestHeartRate ? `${latestHeartRate.min_bpm}–${latestHeartRate.max_bpm}` : "—"}
+                    unit="bpm"
+                  />
+                </div>
+                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <MetricCard label="Weight" value={latestWorkoutWeight ? latestWorkoutWeight.minutes : "—"} unit="min" />
+                  <MetricCard label="Cardio / Walk" value={latestWorkoutCardio ? latestWorkoutCardio.minutes : "—"} unit="min" />
+                </div>
+              </Card>
+            )}
+
+            {profile.role === "Patient" && (
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Footprints size={16} color={COLORS.primary} />
+                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log activity</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Steps</label>
+                    <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Sleep (hrs)</label>
+                    <input type="number" step="0.1" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Weight</label>
+                    <input type="number" value={workoutWeightValue} onChange={(e) => setWorkoutWeightValue(e.target.value)} placeholder="30" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Cardio / Walk</label>
+                    <input type="number" value={workoutCardioValue} onChange={(e) => setWorkoutCardioValue(e.target.value)} placeholder="20" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>DAILY HEART RATE</span>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Min (bpm)</label>
+                    <input type="number" value={hrMinValue} onChange={(e) => setHrMinValue(e.target.value)} placeholder="58" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Max (bpm)</label>
+                    <input type="number" value={hrMaxValue} onChange={(e) => setHrMaxValue(e.target.value)} placeholder="142" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { addStepsReading(); addWorkoutReadings(); addSleepReading(); addHeartRateReading(); }}
+                  className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium"
+                  style={{ background: COLORS.ink, color: "#fff" }}
+                >
+                  <Plus size={14} /> Save activity
+                </button>
+              </Card>
+            )}
+
+            {stepsReadings.length > 0 && (
+              <Card>
+                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Steps history</span>
+                <HistoryBarChart data={stepsReadings} dataKey="value" unit=" steps" colorForEntry={() => COLORS.primary} />
+              </Card>
+            )}
+
+            {workoutReadings.length > 0 && (
+              <Card>
+                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Workout minutes history</span>
+                <div className="flex flex-col gap-5">
+                  {["weight", "cardio"].map((type) => {
+                    const entries = workoutReadings.filter((r) => r.type === type);
+                    return (
+                      <div key={type}>
+                        <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>
+                          {type === "weight" ? "WEIGHT" : "CARDIO / WALK"}
+                        </span>
+                        {entries.length === 0 ? (
+                          <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No entries yet</div>
+                        ) : (
+                          <HistoryBarChart
+                            data={entries}
+                            dataKey="minutes"
+                            unit=" min"
+                            colorForEntry={() => (type === "weight" ? COLORS.elevated : COLORS.normal)}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {sleepReadings.length > 0 && (
+              <Card>
+                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Sleep history</span>
+                <HistoryBarChart data={sleepReadings} dataKey="hours" unit=" hrs" colorForEntry={() => COLORS.primarySoft} />
+              </Card>
+            )}
+
+            {heartRateReadings.length > 0 && (
+              <Card>
+                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Heart rate history</span>
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={heartRateReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+                    <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
+                    <YAxis hide />
+                    <Tooltip
+                      cursor={{ fill: COLORS.surfaceAlt }}
+                      contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
+                      labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
+                    />
+                    <Bar dataKey="min_bpm" name="Min" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                    <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+          </>
+        )}
+
+        {activeTab === "lab" && (
+          <>
+            {(latestFasting || latestNonFasting || latestA1c) && (
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Droplet size={16} color={COLORS.primary} />
+                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <SugarSummaryCard reading={latestFasting} />
+                  <SugarSummaryCard reading={latestNonFasting} />
+                  <SugarSummaryCard reading={latestA1c} />
+                </div>
+              </Card>
+            )}
+
+            {latestBp && (
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Heart size={16} color={COLORS.primary} />
+                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
+                </div>
+                <div className="rounded-2xl py-6 mb-4 flex flex-col items-center" style={{ background: COLORS.surfaceAlt }}>
+                  <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT READING</span>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-5xl font-bold">
+                    {latestBp.systolic}<span style={{ color: COLORS.inkSoft, fontWeight: 500 }}>/{latestBp.diastolic}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
+                    <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <MetricCard label="Systolic" value={latestBp.systolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
+                  <MetricCard label="Diastolic" value={latestBp.diastolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
+                  <MetricCard label="Pulse" value={latestBp.pulse} unit="bpm" zoneLabel={pulseZone(latestBp.pulse).label} zoneColor={pulseZone(latestBp.pulse).color} />
+                </div>
+              </Card>
+            )}
+
+            {profile.role === "Patient" && (
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity size={16} color={COLORS.primary} />
+                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood pressure</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Systolic</label>
+                    <input type="number" value={sys} onChange={(e) => setSys(e.target.value)} placeholder="120" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Diastolic</label>
+                    <input type="number" value={dia} onChange={(e) => setDia(e.target.value)} placeholder="80" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Pulse</label>
+                    <input type="number" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="72" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                </div>
+                <button onClick={addBpReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                  <Plus size={14} /> Save blood pressure
+                </button>
+              </Card>
+            )}
+
+            {profile.role === "Patient" && (
+              <Card>
+                <div className="flex items-center gap-2 mb-4">
+                  <Droplet size={16} color={COLORS.primary} />
+                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood sugar</span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Fasting</label>
+                    <input type="number" value={fastingValue} onChange={(e) => setFastingValue(e.target.value)} placeholder="95" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Non-fasting</label>
+                    <input type="number" value={nonFastingValue} onChange={(e) => setNonFastingValue(e.target.value)} placeholder="130" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
+                    <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="5.6" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                </div>
+                <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                  <Plus size={14} /> Save blood sugar
+                </button>
+              </Card>
+            )}
+
+            {bpReadings.length > 0 && (
+              <Card>
+                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure history</span>
                 <HistoryBarChart
-                  data={weightReadings.slice(-5)}
-                  dataKey="value"
-                  unit={` ${latestWeight.unit}`}
-                  colorForEntry={() => COLORS.primary}
-                  height={110}
-                  showAxis={false}
-                  maxBarSize={20}
+                  data={bpReadings}
+                  dataKey="systolic"
+                  unit=""
+                  colorForEntry={(r) => categorizeBP(r.systolic, r.diastolic).color}
                 />
+              </Card>
+            )}
+
+            {sugarReadings.length > 0 && (
+              <Card>
+                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar history</span>
+                <div className="flex flex-col gap-5">
+                  {SUGAR_TYPES.map((t) => {
+                    const entries = sugarReadings.filter((r) => r.type === t.id);
+                    return (
+                      <div key={t.id}>
+                        <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>{t.label.toUpperCase()}</span>
+                        {entries.length === 0 ? (
+                          <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No readings yet</div>
+                        ) : (
+                          <HistoryBarChart
+                            data={entries}
+                            dataKey="value"
+                            unit={t.unit === "%" ? "%" : ` ${t.unit}`}
+                            colorForEntry={(r) => categorizeSugar(t.id, r.value).color}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+          </>
+        )}
+
+        {activeTab === "doctor" && (
+          <>
+            {profile.role === "Doctor" && (
+              <Card>
+                <label className="text-xs font-semibold block mb-2" style={{ color: COLORS.inkSoft }}>VIEWING PATIENT</label>
+                <select value={selectedPatientId || ""} onChange={(e) => setSelectedPatientId(e.target.value)} className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}>
+                  {patients.length === 0 && <option>No patients yet</option>}
+                  {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Card>
+            )}
+
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <FileText size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Prescription</span>
+              </div>
+
+              {profile.role === "Doctor" && (
+                <>
+                  <textarea value={prescriptionDraft} onChange={(e) => setPrescriptionDraft(e.target.value)} rows={4} className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} placeholder="Write instructions for your patient..." />
+                  <button onClick={savePrescription} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
+                    {prescriptionSaved ? <Check size={14} /> : <Plus size={14} />} {prescriptionSaved ? "Saved" : "Save prescription"}
+                  </button>
+                </>
+              )}
+
+              <div className="mb-4">
+                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>CURRENT</span>
+                {currentPrescription ? (
+                  <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                    <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
+                    <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(currentPrescription.updated_at)} · {daysAgoLabel(currentPrescription.updated_at)}</div>
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: COLORS.inkSoft }}>No prescription yet.</p>
+                )}
+              </div>
+
+              {pastPrescriptions.length > 0 && (
+                <div>
+                  <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>PAST</span>
+                  <div className="flex flex-col gap-2">
+                    {pastPrescriptions.map((p) => (
+                      <div key={p.id} className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt, opacity: 0.75 }}>
+                        <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{p.text}</p>
+                        <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(p.updated_at)} · {daysAgoLabel(p.updated_at)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          </>
+        )}
+
+        {activeTab === "profile" && (
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <User size={16} color={COLORS.primary} />
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile</span>
+            </div>
+            <div className="flex flex-col gap-3 mb-5">
+              <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>NAME</span>
+                <span className="text-sm" style={{ color: COLORS.ink }}>{profile.name}</span>
+              </div>
+              <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
+                <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
               </div>
             </div>
-          </Card>
-        )}
-
-        {(latestSteps || latestWorkoutWeight || latestWorkoutCardio || latestSleep || latestHeartRate) && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Footprints size={16} color={COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Activity</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-              <MetricCard label="Steps" value={latestSteps ? latestSteps.value.toLocaleString() : "—"} unit="today" />
-              <MetricCard label="Sleep" value={latestSleep ? latestSleep.hours : "—"} unit="hrs" />
-              <MetricCard
-                label="Heart rate"
-                value={latestHeartRate ? `${latestHeartRate.min_bpm}–${latestHeartRate.max_bpm}` : "—"}
-                unit="bpm"
-              />
-            </div>
-            <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
-            <div className="grid grid-cols-2 gap-3">
-              <MetricCard label="Weight" value={latestWorkoutWeight ? latestWorkoutWeight.minutes : "—"} unit="min" />
-              <MetricCard label="Cardio / Walk" value={latestWorkoutCardio ? latestWorkoutCardio.minutes : "—"} unit="min" />
-            </div>
-          </Card>
-        )}
-
-        {(latestFasting || latestNonFasting || latestA1c) && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Droplet size={16} color={COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <SugarSummaryCard reading={latestFasting} />
-              <SugarSummaryCard reading={latestNonFasting} />
-              <SugarSummaryCard reading={latestA1c} />
-            </div>
-          </Card>
-        )}
-
-        {latestBp && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Heart size={16} color={COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
-            </div>
-            <div className="rounded-2xl py-6 mb-4 flex flex-col items-center" style={{ background: COLORS.surfaceAlt }}>
-              <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT READING</span>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-5xl font-bold">
-                {latestBp.systolic}<span style={{ color: COLORS.inkSoft, fontWeight: 500 }}>/{latestBp.diastolic}</span>
-              </div>
-              <div className="flex items-center gap-3 mt-2">
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
-                <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <MetricCard label="Systolic" value={latestBp.systolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
-              <MetricCard label="Diastolic" value={latestBp.diastolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
-              <MetricCard label="Pulse" value={latestBp.pulse} unit="bpm" zoneLabel={pulseZone(latestBp.pulse).label} zoneColor={pulseZone(latestBp.pulse).color} />
-            </div>
-          </Card>
-        )}
-
-        {profile.role === "Patient" && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Activity size={16} color={COLORS.primary} />
-              <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood pressure</span>
-            </div>
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Systolic</label>
-                <input type="number" value={sys} onChange={(e) => setSys(e.target.value)} placeholder="120" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-              <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Diastolic</label>
-                <input type="number" value={dia} onChange={(e) => setDia(e.target.value)} placeholder="80" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-              <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Pulse</label>
-                <input type="number" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="72" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-            </div>
-            <button onClick={addBpReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-              <Plus size={14} /> Save blood pressure
+            <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+              <LogOut size={14} /> Log out
             </button>
           </Card>
         )}
+      </div>
 
-        {profile.role === "Patient" && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Droplet size={16} color={COLORS.primary} />
-              <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood sugar</span>
-            </div>
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Fasting</label>
-                <input type="number" value={fastingValue} onChange={(e) => setFastingValue(e.target.value)} placeholder="95" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-              <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Non-fasting</label>
-                <input type="number" value={nonFastingValue} onChange={(e) => setNonFastingValue(e.target.value)} placeholder="130" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-              <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
-                <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="5.6" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-            </div>
-            <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-              <Plus size={14} /> Save blood sugar
-            </button>
-          </Card>
-        )}
-
-        {profile.role === "Patient" && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Scale size={16} color={COLORS.primary} />
-              <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log body weight</span>
-            </div>
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
-                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Weight (kg)</label>
-                <input type="number" step="0.1" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} placeholder="75" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-              <button onClick={addWeightReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-                <Plus size={14} /> Save weight
-              </button>
-            </div>
-          </Card>
-        )}
-
-        {profile.role === "Patient" && (
-          <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <Footprints size={16} color={COLORS.primary} />
-              <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log activity</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Steps</label>
-                <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-              <div>
-                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Sleep (hrs)</label>
-                <input type="number" step="0.1" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-            </div>
-
-            <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Weight</label>
-                <input type="number" value={workoutWeightValue} onChange={(e) => setWorkoutWeightValue(e.target.value)} placeholder="30" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-              <div>
-                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Cardio / Walk</label>
-                <input type="number" value={workoutCardioValue} onChange={(e) => setWorkoutCardioValue(e.target.value)} placeholder="20" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-            </div>
-
-            <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>DAILY HEART RATE</span>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div>
-                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Min (bpm)</label>
-                <input type="number" value={hrMinValue} onChange={(e) => setHrMinValue(e.target.value)} placeholder="58" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-              <div>
-                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Max (bpm)</label>
-                <input type="number" value={hrMaxValue} onChange={(e) => setHrMaxValue(e.target.value)} placeholder="142" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-            </div>
-
+      <div
+        className="fixed bottom-0 left-0 right-0 flex justify-around items-center py-2"
+        style={{ background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -4px 16px rgba(22,35,31,0.06)" }}
+      >
+        {NAV_ITEMS.map(({ id, label, Icon }) => {
+          const active = activeTab === id;
+          return (
             <button
-              onClick={() => { addStepsReading(); addWorkoutReadings(); addSleepReading(); addHeartRateReading(); }}
-              className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium"
-              style={{ background: COLORS.ink, color: "#fff" }}
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl"
             >
-              <Plus size={14} /> Save activity
+              <Icon size={20} color={active ? COLORS.primary : COLORS.inkSoft} strokeWidth={active ? 2.4 : 2} />
+              <span className="text-[10px] font-semibold" style={{ color: active ? COLORS.primary : COLORS.inkSoft }}>{label}</span>
             </button>
-          </Card>
-        )}
-
-        {bpReadings.length > 0 && (
-          <Card>
-            <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure history</span>
-            <HistoryBarChart
-              data={bpReadings}
-              dataKey="systolic"
-              unit=""
-              colorForEntry={(r) => categorizeBP(r.systolic, r.diastolic).color}
-            />
-          </Card>
-        )}
-
-        {sugarReadings.length > 0 && (
-          <Card>
-            <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar history</span>
-            <div className="flex flex-col gap-5">
-              {SUGAR_TYPES.map((t) => {
-                const entries = sugarReadings.filter((r) => r.type === t.id);
-                return (
-                  <div key={t.id}>
-                    <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>{t.label.toUpperCase()}</span>
-                    {entries.length === 0 ? (
-                      <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No readings yet</div>
-                    ) : (
-                      <HistoryBarChart
-                        data={entries}
-                        dataKey="value"
-                        unit={t.unit === "%" ? "%" : ` ${t.unit}`}
-                        colorForEntry={(r) => categorizeSugar(t.id, r.value).color}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-
-        {stepsReadings.length > 0 && (
-          <Card>
-            <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Steps history</span>
-            <HistoryBarChart data={stepsReadings} dataKey="value" unit=" steps" colorForEntry={() => COLORS.primary} />
-          </Card>
-        )}
-
-        {workoutReadings.length > 0 && (
-          <Card>
-            <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Workout minutes history</span>
-            <div className="flex flex-col gap-5">
-              {["weight", "cardio"].map((type) => {
-                const entries = workoutReadings.filter((r) => r.type === type);
-                return (
-                  <div key={type}>
-                    <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>
-                      {type === "weight" ? "WEIGHT" : "CARDIO / WALK"}
-                    </span>
-                    {entries.length === 0 ? (
-                      <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No entries yet</div>
-                    ) : (
-                      <HistoryBarChart
-                        data={entries}
-                        dataKey="minutes"
-                        unit=" min"
-                        colorForEntry={() => (type === "weight" ? COLORS.elevated : COLORS.normal)}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-
-        {sleepReadings.length > 0 && (
-          <Card>
-            <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Sleep history</span>
-            <HistoryBarChart data={sleepReadings} dataKey="hours" unit=" hrs" colorForEntry={() => COLORS.primarySoft} />
-          </Card>
-        )}
-
-        {heartRateReadings.length > 0 && (
-          <Card>
-            <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Heart rate history</span>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={heartRateReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
-                <YAxis hide />
-                <Tooltip
-                  cursor={{ fill: COLORS.surfaceAlt }}
-                  contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
-                  labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
-                />
-                <Bar dataKey="min_bpm" name="Min" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        )}
+          );
+        })}
       </div>
     </div>
   );
