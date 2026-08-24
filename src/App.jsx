@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight, Apple, CheckCircle2 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { supabase } from "./supabaseClient";
 
 const COLORS = {
@@ -102,6 +102,32 @@ const FAMILY_HISTORY_FIELDS = [
   { key: "family_longevity", label: "Longevity / Age at death" },
 ];
 
+const ACTIVITY_METRICS = [
+  {
+    id: "steps", label: "Steps", Icon: Footprints, unit: " steps", dataKey: "value", decimals: 0, color: COLORS.primary,
+    recommendedFields: [{ key: "recommended_steps", label: "Recommended steps/day", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
+  },
+  {
+    id: "sleep", label: "Sleep", Icon: Moon, unit: " hrs", dataKey: "hours", decimals: 1, color: COLORS.primarySoft,
+    recommendedFields: [{ key: "recommended_sleep_hours", label: "Recommended sleep (hrs)", parse: (v) => (v === "" ? null : parseFloat(v)) }],
+  },
+  {
+    id: "workoutWeight", label: "Workout minutes", Icon: Dumbbell, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.elevated,
+    recommendedFields: [{ key: "recommended_workout_weight_minutes", label: "Recommended minutes/day", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
+  },
+  {
+    id: "workoutCardio", label: "Cardio / Walk", Icon: Footprints, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.normal,
+    recommendedFields: [{ key: "recommended_workout_cardio_minutes", label: "Recommended minutes/day", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
+  },
+  {
+    id: "heartRate", label: "Daily heart rate", Icon: HeartPulse, unit: " bpm", dataKey: null, decimals: 0, color: null,
+    recommendedFields: [
+      { key: "recommended_heart_rate_min", label: "Recommended min (bpm)", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
+      { key: "recommended_heart_rate_max", label: "Recommended max (bpm)", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
+    ],
+  },
+];
+
 function formatDOBForInput(isoDate) {
   if (!isoDate) return "";
   const d = new Date(isoDate + "T00:00:00");
@@ -133,9 +159,10 @@ function calcAge(isoDate) {
   return { years, months };
 }
 
-function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160, showAxis = true, maxBarSize = 28 }) {
+function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160, showAxis = true, maxBarSize = 28, referenceValue = null, referenceLabel }) {
   if (!data || data.length === 0) return null;
   const chartData = data.map((d) => ({ ...d, _label: shortDate(d.created_at) }));
+  const hasReference = typeof referenceValue === "number" && !Number.isNaN(referenceValue);
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={chartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
@@ -152,6 +179,16 @@ function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160
             <Cell key={i} fill={colorForEntry(entry, i, chartData)} />
           ))}
         </Bar>
+        {hasReference && (
+          <ReferenceLine
+            y={referenceValue}
+            stroke={COLORS.ink}
+            strokeDasharray="4 4"
+            strokeWidth={1.5}
+            ifOverflow="extendDomain"
+            label={showAxis ? { value: referenceLabel || `Target: ${referenceValue}${unit}`, position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft } : undefined}
+          />
+        )}
       </BarChart>
     </ResponsiveContainer>
   );
@@ -205,6 +242,62 @@ function AtAGlanceTile({ Icon, label, value, dotColor, onClick }) {
         <div className="text-[10px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</div>
       </div>
     </button>
+  );
+}
+
+function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, data, color, recommendedValue, onOpen }) {
+  return (
+    <Card>
+      <div className="flex items-center gap-2 mb-4">
+        <Icon size={16} color={COLORS.primary} />
+        <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col items-center justify-center">
+          <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
+          {latest ? (
+            <>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                {latest[dataKey]}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}>{unit}</span>
+              </div>
+              {prev && (
+                <span
+                  className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2"
+                  style={{
+                    background: (latest[dataKey] >= prev[dataKey] ? COLORS.elevated : COLORS.normal) + "1a",
+                    color: latest[dataKey] >= prev[dataKey] ? COLORS.elevated : COLORS.normal,
+                  }}
+                >
+                  {latest[dataKey] > prev[dataKey] ? "+" : ""}{(latest[dataKey] - prev[dataKey]).toFixed(decimals)}{unit} vs last
+                </span>
+              )}
+              <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latest.created_at)} · {daysAgoLabel(latest.created_at)}</span>
+            </>
+          ) : (
+            <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
+          )}
+        </div>
+        <div onClick={onOpen} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+          <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+          {data.length > 0 ? (
+            <HistoryBarChart
+              data={data.slice(-5)}
+              dataKey={dataKey}
+              unit={unit}
+              colorForEntry={(entry, i, arr) => (i === arr.length - 1 ? color : COLORS.muted)}
+              height={110}
+              showAxis={false}
+              maxBarSize={20}
+              referenceValue={recommendedValue}
+            />
+          ) : (
+            <div className="flex items-center justify-center" style={{ height: 110 }}>
+              <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -288,6 +381,9 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [messageDraft, setMessageDraft] = useState("");
   const [doctorHasUnreadMessages, setDoctorHasUnreadMessages] = useState(false);
+  const [activityDetailId, setActivityDetailId] = useState(null);
+  const [recommendedDraft, setRecommendedDraft] = useState({});
+  const [recommendedSaved, setRecommendedSaved] = useState(false);
 
   const [sys, setSys] = useState("");
   const [dia, setDia] = useState("");
@@ -351,6 +447,17 @@ export default function App() {
   }, [profile]);
 
   const activePatientId = profile?.role === "Doctor" ? selectedPatientId : profile?.id;
+  const activePatientProfile = profile?.role === "Doctor" ? patients.find((p) => p.id === selectedPatientId) : profile;
+
+  // Sync the recommended-value draft whenever the activity detail page or active patient changes
+  useEffect(() => {
+    if (!activityDetailId) return;
+    const metric = ACTIVITY_METRICS.find((m) => m.id === activityDetailId);
+    if (!metric) return;
+    const draft = {};
+    metric.recommendedFields.forEach((f) => { draft[f.key] = activePatientProfile?.[f.key] ?? ""; });
+    setRecommendedDraft(draft);
+  }, [activityDetailId, activePatientId]);
 
   // Load readings + prescription whenever the active patient changes
   useEffect(() => {
@@ -486,6 +593,17 @@ export default function App() {
     setHrMaxValue("");
   };
 
+  const saveRecommended = async () => {
+    const metric = ACTIVITY_METRICS.find((m) => m.id === activityDetailId);
+    if (!metric || !activePatientId) return;
+    const payload = {};
+    metric.recommendedFields.forEach((f) => { payload[f.key] = f.parse(recommendedDraft[f.key] ?? ""); });
+    const { data } = await supabase.from("profiles").update(payload).eq("id", activePatientId).select().single();
+    if (data) setPatients((prev) => prev.map((p) => (p.id === data.id ? data : p)));
+    setRecommendedSaved(true);
+    setTimeout(() => setRecommendedSaved(false), 1800);
+  };
+
   const savePersonal = async () => {
     const parsedDOB = parseDOBInput(personalDraft.date_of_birth);
     const payload = {
@@ -516,6 +634,20 @@ export default function App() {
     if (data) setProfile(data);
     setFamilySaved(true);
     setTimeout(() => setFamilySaved(false), 1800);
+  };
+
+  const connectAppleHealth = async () => {
+    const { data } = await supabase.from("profiles").update({
+      apple_health_connected: true, apple_health_connected_at: new Date().toISOString(),
+    }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
+  };
+
+  const disconnectAppleHealth = async () => {
+    const { data } = await supabase.from("profiles").update({
+      apple_health_connected: false, apple_health_connected_at: null,
+    }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
   };
 
   const savePrescription = async () => {
@@ -572,9 +704,15 @@ export default function App() {
   const latestWeight = weightReadings[weightReadings.length - 1];
   const prevWeight = weightReadings[weightReadings.length - 2];
   const latestSteps = stepsReadings[stepsReadings.length - 1];
-  const latestWorkoutWeight = [...workoutReadings].reverse().find((r) => r.type === "weight");
-  const latestWorkoutCardio = [...workoutReadings].reverse().find((r) => r.type === "cardio");
+  const prevSteps = stepsReadings[stepsReadings.length - 2];
+  const workoutWeightEntries = workoutReadings.filter((r) => r.type === "weight");
+  const workoutCardioEntries = workoutReadings.filter((r) => r.type === "cardio");
+  const latestWorkoutWeight = workoutWeightEntries[workoutWeightEntries.length - 1];
+  const prevWorkoutWeight = workoutWeightEntries[workoutWeightEntries.length - 2];
+  const latestWorkoutCardio = workoutCardioEntries[workoutCardioEntries.length - 1];
+  const prevWorkoutCardio = workoutCardioEntries[workoutCardioEntries.length - 2];
   const latestSleep = sleepReadings[sleepReadings.length - 1];
+  const prevSleep = sleepReadings[sleepReadings.length - 2];
   const latestHeartRate = heartRateReadings[heartRateReadings.length - 1];
   const latestFasting = [...sugarReadings].reverse().find((r) => r.type === "fasting");
   const latestNonFasting = [...sugarReadings].reverse().find((r) => r.type === "nonfasting");
@@ -587,6 +725,13 @@ export default function App() {
   const heartRateZoneColor = latestHeartRate
     ? (latestHeartRate.min_bpm < 60 || latestHeartRate.max_bpm > 100 ? COLORS.elevated : COLORS.normal)
     : COLORS.muted;
+
+  const ACTIVITY_METRIC_RUNTIME = {
+    steps: { data: stepsReadings, latest: latestSteps, prev: prevSteps },
+    sleep: { data: sleepReadings, latest: latestSleep, prev: prevSleep },
+    workoutWeight: { data: workoutWeightEntries, latest: latestWorkoutWeight, prev: prevWorkoutWeight },
+    workoutCardio: { data: workoutCardioEntries, latest: latestWorkoutCardio, prev: prevWorkoutCardio },
+  };
 
   const outOfRangeAlerts = [];
   if (latestBp && ["High, Stage 1", "High, Stage 2", "Crisis"].includes(latestBpZone.label)) {
@@ -698,6 +843,103 @@ export default function App() {
                 </div>
               </div>
             )}
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- ACTIVITY METRIC DETAIL PAGE ----------
+  if (page === "activityDetail" && activityDetailId) {
+    const metric = ACTIVITY_METRICS.find((m) => m.id === activityDetailId);
+    const runtime = ACTIVITY_METRIC_RUNTIME[activityDetailId];
+    return (
+      <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
+        <div className="max-w-2xl mx-auto p-5">
+          <button
+            onClick={() => setPage("dashboard")}
+            className="flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl mb-5"
+            style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <metric.Icon size={16} color={COLORS.primary} />
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
+            </div>
+
+            {activityDetailId === "heartRate" ? (
+              heartRateReadings.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={heartRateReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+                    <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
+                    <YAxis hide />
+                    <Tooltip
+                      cursor={{ fill: COLORS.surfaceAlt }}
+                      contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
+                      labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
+                    />
+                    <Bar dataKey="min_bpm" name="Min" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                    <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                    {typeof activePatientProfile?.recommended_heart_rate_min === "number" && (
+                      <ReferenceLine y={activePatientProfile.recommended_heart_rate_min} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target min: ${activePatientProfile.recommended_heart_rate_min}`, position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }} />
+                    )}
+                    {typeof activePatientProfile?.recommended_heart_rate_max === "number" && (
+                      <ReferenceLine y={activePatientProfile.recommended_heart_rate_max} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target max: ${activePatientProfile.recommended_heart_rate_max}`, position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }} />
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No heart rate readings yet.</p>
+              )
+            ) : runtime.data.length > 0 ? (
+              <HistoryBarChart
+                data={runtime.data}
+                dataKey={metric.dataKey}
+                unit={metric.unit}
+                colorForEntry={() => metric.color}
+                height={260}
+                referenceValue={activePatientProfile?.[metric.recommendedFields[0].key] ?? null}
+                referenceLabel={`Target: ${activePatientProfile?.[metric.recommendedFields[0].key]}${metric.unit}`}
+              />
+            ) : (
+              <p className="text-sm" style={{ color: COLORS.inkSoft }}>No {metric.label.toLowerCase()} readings yet.</p>
+            )}
+
+            <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+              <span className="text-xs font-semibold tracking-wide block mb-3" style={{ color: COLORS.inkSoft }}>RECOMMENDED TARGET</span>
+              {profile.role === "Doctor" ? (
+                <>
+                  <div className={metric.recommendedFields.length > 1 ? "grid grid-cols-2 gap-3 mb-3" : "mb-3"}>
+                    {metric.recommendedFields.map((f) => (
+                      <div key={f.key}>
+                        <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>{f.label}</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={recommendedDraft[f.key] ?? ""}
+                          onChange={(e) => setRecommendedDraft({ ...recommendedDraft, [f.key]: e.target.value })}
+                          className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center"
+                          style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={saveRecommended} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                    {recommendedSaved ? <Check size={14} /> : <Plus size={14} />} {recommendedSaved ? "Saved" : "Save target"}
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {metric.recommendedFields.map((f) => (
+                    <span key={f.key} className="text-sm" style={{ color: COLORS.ink }}>
+                      {f.label}: {activePatientProfile?.[f.key] != null ? activePatientProfile[f.key] : <span style={{ color: COLORS.inkSoft }}>Not set by your doctor yet</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </Card>
         </div>
       </div>
@@ -870,28 +1112,68 @@ export default function App() {
 
         {activeTab === "activity" && (
           <>
-            {(latestSteps || latestWorkoutWeight || latestWorkoutCardio || latestSleep || latestHeartRate) && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Footprints size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Activity</span>
+            <ActivitySection
+              Icon={Footprints} label="Steps" dataKey="value" unit=" steps" decimals={0}
+              latest={latestSteps} prev={prevSteps} data={stepsReadings} color={COLORS.primary}
+              recommendedValue={activePatientProfile?.recommended_steps ?? null}
+              onOpen={() => { setActivityDetailId("steps"); setPage("activityDetail"); }}
+            />
+            <ActivitySection
+              Icon={Moon} label="Sleep" dataKey="hours" unit=" hrs" decimals={1}
+              latest={latestSleep} prev={prevSleep} data={sleepReadings} color={COLORS.primarySoft}
+              recommendedValue={activePatientProfile?.recommended_sleep_hours ?? null}
+              onOpen={() => { setActivityDetailId("sleep"); setPage("activityDetail"); }}
+            />
+            <ActivitySection
+              Icon={Dumbbell} label="Workout minutes" dataKey="minutes" unit=" min" decimals={0}
+              latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.elevated}
+              recommendedValue={activePatientProfile?.recommended_workout_weight_minutes ?? null}
+              onOpen={() => { setActivityDetailId("workoutWeight"); setPage("activityDetail"); }}
+            />
+            <ActivitySection
+              Icon={Footprints} label="Cardio / Walk" dataKey="minutes" unit=" min" decimals={0}
+              latest={latestWorkoutCardio} prev={prevWorkoutCardio} data={workoutCardioEntries} color={COLORS.normal}
+              recommendedValue={activePatientProfile?.recommended_workout_cardio_minutes ?? null}
+              onOpen={() => { setActivityDetailId("workoutCardio"); setPage("activityDetail"); }}
+            />
+
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <HeartPulse size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Daily heart rate</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
+                  {latestHeartRate ? (
+                    <>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                        {latestHeartRate.min_bpm}–{latestHeartRate.max_bpm}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> bpm</span>
+                      </div>
+                      <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestHeartRate.created_at)} · {daysAgoLabel(latestHeartRate.created_at)}</span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                  <MetricCard label="Steps" value={latestSteps ? latestSteps.value.toLocaleString() : "—"} unit="today" />
-                  <MetricCard label="Sleep" value={latestSleep ? latestSleep.hours : "—"} unit="hrs" />
-                  <MetricCard
-                    label="Heart rate"
-                    value={latestHeartRate ? `${latestHeartRate.min_bpm}–${latestHeartRate.max_bpm}` : "—"}
-                    unit="bpm"
-                  />
+                <div onClick={() => { setActivityDetailId("heartRate"); setPage("activityDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+                  <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+                  {heartRateReadings.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={110}>
+                      <BarChart data={heartRateReadings.slice(-5).map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+                        <YAxis hide />
+                        <Bar dataKey="min_bpm" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
+                        <Bar dataKey="max_bpm" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center" style={{ height: 110 }}>
+                      <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
-                <div className="grid grid-cols-2 gap-3">
-                  <MetricCard label="Weight" value={latestWorkoutWeight ? latestWorkoutWeight.minutes : "—"} unit="min" />
-                  <MetricCard label="Cardio / Walk" value={latestWorkoutCardio ? latestWorkoutCardio.minutes : "—"} unit="min" />
-                </div>
-              </Card>
-            )}
+              </div>
+            </Card>
 
             {profile.role === "Patient" && (
               <Card>
@@ -942,67 +1224,6 @@ export default function App() {
                 >
                   <Plus size={14} /> Save activity
                 </button>
-              </Card>
-            )}
-
-            {stepsReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Steps history</span>
-                <HistoryBarChart data={stepsReadings} dataKey="value" unit=" steps" colorForEntry={() => COLORS.primary} />
-              </Card>
-            )}
-
-            {workoutReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Workout minutes history</span>
-                <div className="flex flex-col gap-5">
-                  {["weight", "cardio"].map((type) => {
-                    const entries = workoutReadings.filter((r) => r.type === type);
-                    return (
-                      <div key={type}>
-                        <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>
-                          {type === "weight" ? "WEIGHT" : "CARDIO / WALK"}
-                        </span>
-                        {entries.length === 0 ? (
-                          <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No entries yet</div>
-                        ) : (
-                          <HistoryBarChart
-                            data={entries}
-                            dataKey="minutes"
-                            unit=" min"
-                            colorForEntry={() => (type === "weight" ? COLORS.elevated : COLORS.normal)}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-
-            {sleepReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Sleep history</span>
-                <HistoryBarChart data={sleepReadings} dataKey="hours" unit=" hrs" colorForEntry={() => COLORS.primarySoft} />
-              </Card>
-            )}
-
-            {heartRateReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Heart rate history</span>
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={heartRateReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                    <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip
-                      cursor={{ fill: COLORS.surfaceAlt }}
-                      contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
-                      labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
-                    />
-                    <Bar dataKey="min_bpm" name="Min" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                  </BarChart>
-                </ResponsiveContainer>
               </Card>
             )}
           </>
@@ -1273,18 +1494,19 @@ export default function App() {
             </div>
 
             <div
-              className="flex gap-2 mb-5 sticky top-0 z-10 -mx-6 px-6 py-2"
+              className="flex gap-2 mb-5 overflow-x-auto sticky top-0 z-10 -mx-6 px-6 py-2"
               style={{ background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}` }}
             >
               {[
                 { id: "personal", label: "Personal" },
                 { id: "medical", label: "Medical background" },
                 { id: "family", label: "Family history" },
+                { id: "sensors", label: "Connect Sensor" },
               ].map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setProfileSubTab(t.id)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex-shrink-0"
                   style={
                     profileSubTab === t.id
                       ? { background: COLORS.ink, color: "#fff" }
@@ -1481,6 +1703,44 @@ export default function App() {
                 <button onClick={saveFamilyHistory} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
                   {familySaved ? <Check size={14} /> : <Plus size={14} />} {familySaved ? "Saved" : "Save"}
                 </button>
+              </>
+            )}
+
+            {profileSubTab === "sensors" && (
+              <>
+                <div className="rounded-2xl p-4 mb-4 flex items-center gap-3.5" style={{ background: COLORS.surfaceAlt }}>
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
+                    <Apple size={20} color={COLORS.ink} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-semibold block" style={{ color: COLORS.ink }}>Apple Health</span>
+                    {profile.apple_health_connected ? (
+                      <span className="text-xs flex items-center gap-1 mt-0.5" style={{ color: COLORS.normal }}>
+                        <CheckCircle2 size={12} /> Connected {profile.apple_health_connected_at ? `· ${daysAgoLabel(profile.apple_health_connected_at)}` : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs block mt-0.5" style={{ color: COLORS.inkSoft }}>Not connected</span>
+                    )}
+                  </div>
+                  {profile.apple_health_connected ? (
+                    <button onClick={disconnectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                      Disconnect
+                    </button>
+                  ) : (
+                    <button onClick={connectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                      Connect
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-xs leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                  Apple Health data lives on your iPhone and Apple only allows native iOS apps to read it directly —
+                  a website like this one can't connect to HealthKit on its own. "Connect" here marks your account as
+                  linked; to actually pull in steps, heart rate, sleep, and weight from Apple Health, Cuff needs a
+                  companion iOS app (or a sync service like Terra, Vital, or Spike) to bridge HealthKit data into your
+                  readings. Until that's built, connecting here won't sync data automatically — you can still log
+                  everything yourself from the Activity and Lab tabs.
+                </p>
               </>
             )}
           </Card>
