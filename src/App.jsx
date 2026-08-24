@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send } from "lucide-react";
+import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
 
@@ -190,6 +190,21 @@ function MetricCard({ label, value, unit, zoneLabel, zoneColor }) {
         <span className="text-xs" style={{ color: COLORS.inkSoft }}>{unit}</span>
       </div>
     </div>
+  );
+}
+
+function AtAGlanceTile({ Icon, label, value, dotColor, onClick }) {
+  return (
+    <button onClick={onClick} className="rounded-2xl p-3 flex flex-col gap-2 text-left w-full" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+      <div className="flex items-center justify-between">
+        <Icon size={14} color={COLORS.inkSoft} />
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+      </div>
+      <div>
+        <div className="text-sm font-bold truncate" style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }}>{value}</div>
+        <div className="text-[10px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</div>
+      </div>
+    </button>
   );
 }
 
@@ -564,6 +579,27 @@ export default function App() {
   const latestFasting = [...sugarReadings].reverse().find((r) => r.type === "fasting");
   const latestNonFasting = [...sugarReadings].reverse().find((r) => r.type === "nonfasting");
   const latestA1c = [...sugarReadings].reverse().find((r) => r.type === "a1c");
+  const latestSugarReading = [latestFasting, latestNonFasting, latestA1c]
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+  const latestSugarZone = latestSugarReading ? categorizeSugar(latestSugarReading.type, latestSugarReading.value) : null;
+  const latestSugarUnit = latestSugarReading ? SUGAR_TYPES.find((s) => s.id === latestSugarReading.type).unit : "";
+  const heartRateZoneColor = latestHeartRate
+    ? (latestHeartRate.min_bpm < 60 || latestHeartRate.max_bpm > 100 ? COLORS.elevated : COLORS.normal)
+    : COLORS.muted;
+
+  const outOfRangeAlerts = [];
+  if (latestBp && ["High, Stage 1", "High, Stage 2", "Crisis"].includes(latestBpZone.label)) {
+    outOfRangeAlerts.push(`Blood pressure is ${latestBpZone.label.toLowerCase()} (${latestBp.systolic}/${latestBp.diastolic} mmHg)`);
+  }
+  [latestFasting, latestNonFasting, latestA1c].forEach((r) => {
+    if (!r) return;
+    const z = categorizeSugar(r.type, r.value);
+    if (z.label !== "Normal") {
+      const t = SUGAR_TYPES.find((s) => s.id === r.type);
+      outOfRangeAlerts.push(`${t.label} sugar is in the ${z.label.toLowerCase()} (${r.value}${t.unit === "%" ? "%" : ` ${t.unit}`})`);
+    }
+  });
 
   // ---------- AUTH SCREEN ----------
   if (!session || !profile) {
@@ -650,6 +686,18 @@ export default function App() {
             ) : (
               <p className="text-sm" style={{ color: COLORS.inkSoft }}>No weight readings yet.</p>
             )}
+
+            {profile.role === "Patient" && (
+              <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Log body weight (kg)</label>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.1" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} placeholder="75" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  <button onClick={addWeightReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                    <Plus size={14} /> Save
+                  </button>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>
@@ -689,6 +737,87 @@ export default function App() {
 
         {activeTab === "home" && (
           <>
+            {outOfRangeAlerts.length > 0 && (
+              <div className="rounded-2xl p-4 mb-5 flex items-start gap-3" style={{ background: COLORS.high + "14", border: `1px solid ${COLORS.high}` }}>
+                <AlertTriangle size={18} color={COLORS.high} className="flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  {outOfRangeAlerts.map((a, i) => (
+                    <span key={i} className="text-sm font-medium" style={{ color: COLORS.high }}>{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Card>
+              <div className="grid grid-cols-4 gap-2">
+                <AtAGlanceTile
+                  Icon={Heart}
+                  label="BP"
+                  value={latestBp ? `${latestBp.systolic}/${latestBp.diastolic}` : "—"}
+                  dotColor={latestBpZone ? latestBpZone.color : COLORS.muted}
+                  onClick={() => setActiveTab("lab")}
+                />
+                <AtAGlanceTile
+                  Icon={Droplet}
+                  label="Sugar"
+                  value={latestSugarReading ? `${latestSugarReading.value}${latestSugarUnit === "%" ? "%" : ""}` : "—"}
+                  dotColor={latestSugarZone ? latestSugarZone.color : COLORS.muted}
+                  onClick={() => setActiveTab("lab")}
+                />
+                <AtAGlanceTile
+                  Icon={Scale}
+                  label="Weight"
+                  value={latestWeight ? `${latestWeight.value}${latestWeight.unit}` : "—"}
+                  dotColor={latestWeight ? COLORS.normal : COLORS.muted}
+                  onClick={() => setPage("weightHistory")}
+                />
+                <AtAGlanceTile
+                  Icon={HeartPulse}
+                  label="Heart rate"
+                  value={latestHeartRate ? `${latestHeartRate.min_bpm}–${latestHeartRate.max_bpm}` : "—"}
+                  dotColor={heartRateZoneColor}
+                  onClick={() => setActiveTab("activity")}
+                />
+              </div>
+            </Card>
+
+            {currentPrescription && (
+              <div onClick={() => { setActiveTab("doctor"); setDoctorSubTab("prescription"); }} className="cursor-pointer active:scale-[0.99] transition-transform">
+                <Card>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText size={16} color={COLORS.primary} className="flex-shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-xs font-semibold block" style={{ color: COLORS.inkSoft }}>CURRENT PRESCRIPTION</span>
+                        <p className="text-sm truncate" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} color={COLORS.inkSoft} className="flex-shrink-0" />
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {profile.role === "Patient" && (
+              <Card>
+                <span className="text-xs font-semibold tracking-wide block mb-3" style={{ color: COLORS.inkSoft }}>QUICK LOG</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setActiveTab("lab")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <Heart size={16} color={COLORS.primary} />
+                    <span className="text-xs font-medium" style={{ color: COLORS.ink }}>Log BP</span>
+                  </button>
+                  <button onClick={() => setActiveTab("lab")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <Droplet size={16} color={COLORS.primary} />
+                    <span className="text-xs font-medium" style={{ color: COLORS.ink }}>Log sugar</span>
+                  </button>
+                  <button onClick={() => setPage("weightHistory")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <Scale size={16} color={COLORS.primary} />
+                    <span className="text-xs font-medium" style={{ color: COLORS.ink }}>Log weight</span>
+                  </button>
+                </div>
+              </Card>
+            )}
+
             {latestWeight ? (
               <Card>
                 <div className="flex items-center gap-2 mb-4">
