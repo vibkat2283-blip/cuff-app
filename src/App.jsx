@@ -993,6 +993,16 @@ export default function App() {
               <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile</span>
             </div>
 
+            <div className="flex items-center justify-between gap-3 rounded-xl p-3.5 mb-5" style={{ background: COLORS.surfaceAlt }}>
+              <div>
+                <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
+                <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
+              </div>
+              <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                <LogOut size={14} /> Log out
+              </button>
+            </div>
+
             <div className="flex gap-2 mb-5">
               {[
                 { id: "personal", label: "Personal" },
@@ -1128,17 +1138,8 @@ export default function App() {
                   <textarea value={personalDraft.food_allergies} onChange={(e) => setPersonalDraft({ ...personalDraft, food_allergies: e.target.value })} rows={2} placeholder="Peanuts, lactose, gluten, ..." className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
-                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
+                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
                   {personalSaved ? <Check size={14} /> : <Plus size={14} />} {personalSaved ? "Saved" : "Save"}
-                </button>
-
-                <div className="rounded-xl p-3.5 mb-5" style={{ background: COLORS.surfaceAlt }}>
-                  <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
-                  <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
-                </div>
-
-                <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
-                  <LogOut size={14} /> Log out
                 </button>
               </>
             )}
