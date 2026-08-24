@@ -1003,7 +1003,10 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex gap-2 mb-5">
+            <div
+              className="flex gap-2 mb-5 sticky top-0 z-10 -mx-6 px-6 py-2"
+              style={{ background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}` }}
+            >
               {[
                 { id: "personal", label: "Personal" },
                 { id: "medical", label: "Medical background" },
