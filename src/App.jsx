@@ -67,6 +67,58 @@ function shortDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const MEDICAL_FIELDS = [
+  { key: "current_diagnoses", label: "Current diagnoses" },
+  { key: "previous_diagnoses", label: "Previous diagnoses" },
+  { key: "previous_surgeries", label: "Previous surgeries" },
+  { key: "hospitalisations", label: "Hospitalisations" },
+  { key: "major_illnesses", label: "Major illnesses" },
+  { key: "medical_family_history", label: "Family history" },
+  { key: "previous_thrombotic_events", label: "Previous thrombotic events" },
+  { key: "cardiovascular_history", label: "Cardiovascular history" },
+  { key: "diabetes", label: "Diabetes" },
+  { key: "hypertension", label: "Hypertension" },
+  { key: "thyroid_disease", label: "Thyroid disease" },
+  { key: "kidney_disease", label: "Kidney disease" },
+  { key: "liver_disease", label: "Liver disease" },
+  { key: "cancer_history", label: "Cancer history" },
+  { key: "autoimmune_disease", label: "Autoimmune disease" },
+  { key: "mental_health_history", label: "Mental-health history" },
+];
+
+function formatDOBForInput(isoDate) {
+  if (!isoDate) return "";
+  const d = new Date(isoDate + "T00:00:00");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${day}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
+}
+
+function parseDOBInput(str) {
+  if (!str) return null;
+  const m = str.trim().match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+  if (!m) return null;
+  const day = parseInt(m[1], 10);
+  const monthIndex = MONTHS.findIndex((mo) => mo.toLowerCase() === m[2].toLowerCase());
+  const year = parseInt(m[3], 10);
+  if (monthIndex === -1 || day < 1 || day > 31) return null;
+  const d = new Date(year, monthIndex, day);
+  return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function calcAge(isoDate) {
+  if (!isoDate) return null;
+  const dob = new Date(isoDate + "T00:00:00");
+  const now = new Date();
+  let years = now.getFullYear() - dob.getFullYear();
+  let months = now.getMonth() - dob.getMonth();
+  if (now.getDate() < dob.getDate()) months--;
+  if (months < 0) { years--; months += 12; }
+  if (years < 0) return null;
+  return { years, months };
+}
+
 function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160, showAxis = true, maxBarSize = 28 }) {
   if (!data || data.length === 0) return null;
   const chartData = data.map((d) => ({ ...d, _label: shortDate(d.created_at) }));
@@ -156,6 +208,21 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [page, setPage] = useState("dashboard"); // 'dashboard' | 'weightHistory'
   const [activeTab, setActiveTab] = useState("home"); // 'home' | 'activity' | 'lab' | 'doctor' | 'profile'
+  const [profileSubTab, setProfileSubTab] = useState("personal"); // 'personal' | 'medical' | 'family'
+  const [personalDraft, setPersonalDraft] = useState({
+    first_name: "", last_name: "", occupation: "", contact_email: "",
+    phone_country_code: "", phone_number: "", date_of_birth: "", sex: "",
+    height_ft: "", height_in: "", current_weight_kg: "", city: "", country: "",
+    emergency_country_code: "", emergency_number: "", blood_group: "", allergies: "", food_allergies: "",
+  });
+  const [personalSaved, setPersonalSaved] = useState(false);
+  const [medicalFields, setMedicalFields] = useState(
+    Object.fromEntries(MEDICAL_FIELDS.map((f) => [f.key, ""]))
+  );
+  const [medicalDraft, setMedicalDraft] = useState("");
+  const [familyDraft, setFamilyDraft] = useState("");
+  const [medicalSaved, setMedicalSaved] = useState(false);
+  const [familySaved, setFamilySaved] = useState(false);
   const [profile, setProfile] = useState(null);
   const [authMode, setAuthMode] = useState("signin"); // 'signin' | 'signup'
   const [name, setName] = useState("");
@@ -206,7 +273,34 @@ export default function App() {
       setProfile(null);
       return;
     }
-    supabase.from("profiles").select("*").eq("id", session.user.id).single().then(({ data }) => setProfile(data));
+    supabase.from("profiles").select("*").eq("id", session.user.id).single().then(({ data }) => {
+      setProfile(data);
+      if (data) {
+        setMedicalDraft(data.medical_background || "");
+        setMedicalFields(Object.fromEntries(MEDICAL_FIELDS.map((f) => [f.key, data[f.key] || ""])));
+        setFamilyDraft(data.family_history || "");
+        setPersonalDraft({
+          first_name: data.first_name || "",
+          last_name: data.last_name || "",
+          occupation: data.occupation || "",
+          contact_email: data.contact_email || "",
+          phone_country_code: data.phone_country_code || "",
+          phone_number: data.phone_number || "",
+          date_of_birth: formatDOBForInput(data.date_of_birth),
+          sex: data.sex || "",
+          height_ft: data.height_ft ?? "",
+          height_in: data.height_in ?? "",
+          current_weight_kg: data.current_weight_kg ?? "",
+          city: data.city || "",
+          country: data.country || "",
+          emergency_country_code: data.emergency_country_code || "",
+          emergency_number: data.emergency_number || "",
+          blood_group: data.blood_group || "",
+          allergies: data.allergies || "",
+          food_allergies: data.food_allergies || "",
+        });
+      }
+    });
   }, [session]);
 
   // Doctors: load the patient list
@@ -336,6 +430,38 @@ export default function App() {
     if (data) setHeartRateReadings([...heartRateReadings, ...data]);
     setHrMinValue("");
     setHrMaxValue("");
+  };
+
+  const savePersonal = async () => {
+    const parsedDOB = parseDOBInput(personalDraft.date_of_birth);
+    const payload = {
+      ...personalDraft,
+      date_of_birth: parsedDOB,
+      height_ft: personalDraft.height_ft === "" ? null : parseInt(personalDraft.height_ft),
+      height_in: personalDraft.height_in === "" ? null : parseInt(personalDraft.height_in),
+      current_weight_kg: personalDraft.current_weight_kg === "" ? null : parseFloat(personalDraft.current_weight_kg),
+    };
+    const { data } = await supabase.from("profiles").update(payload).eq("id", profile.id).select().single();
+    if (data) {
+      setProfile(data);
+      setPersonalDraft((prev) => ({ ...prev, date_of_birth: formatDOBForInput(data.date_of_birth) }));
+    }
+    setPersonalSaved(true);
+    setTimeout(() => setPersonalSaved(false), 1800);
+  };
+
+  const saveMedicalBackground = async () => {
+    const { data } = await supabase.from("profiles").update({ ...medicalFields, medical_background: medicalDraft }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
+    setMedicalSaved(true);
+    setTimeout(() => setMedicalSaved(false), 1800);
+  };
+
+  const saveFamilyHistory = async () => {
+    const { data } = await supabase.from("profiles").update({ family_history: familyDraft }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
+    setFamilySaved(true);
+    setTimeout(() => setFamilySaved(false), 1800);
   };
 
   const savePrescription = async () => {
@@ -848,19 +974,206 @@ export default function App() {
               <User size={16} color={COLORS.primary} />
               <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile</span>
             </div>
-            <div className="flex flex-col gap-3 mb-5">
-              <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
-                <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>NAME</span>
-                <span className="text-sm" style={{ color: COLORS.ink }}>{profile.name}</span>
-              </div>
-              <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
-                <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
-                <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
-              </div>
+
+            <div className="flex gap-2 mb-5">
+              {[
+                { id: "personal", label: "Personal" },
+                { id: "medical", label: "Medical background" },
+                { id: "family", label: "Family history" },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setProfileSubTab(t.id)}
+                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                  style={
+                    profileSubTab === t.id
+                      ? { background: COLORS.ink, color: "#fff" }
+                      : { background: COLORS.surfaceAlt, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
+                  }
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
-            <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
-              <LogOut size={14} /> Log out
-            </button>
+
+            {profileSubTab === "personal" && (
+              <>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>First name</label>
+                    <input type="text" value={personalDraft.first_name} onChange={(e) => setPersonalDraft({ ...personalDraft, first_name: e.target.value })} placeholder="Alex" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Last name</label>
+                    <input type="text" value={personalDraft.last_name} onChange={(e) => setPersonalDraft({ ...personalDraft, last_name: e.target.value })} placeholder="Rivera" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Occupation</label>
+                  <input type="text" value={personalDraft.occupation} onChange={(e) => setPersonalDraft({ ...personalDraft, occupation: e.target.value })} placeholder="Software Engineer" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Email</label>
+                  <input type="email" value={personalDraft.contact_email} onChange={(e) => setPersonalDraft({ ...personalDraft, contact_email: e.target.value })} placeholder="alex@example.com" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Country code</label>
+                    <input type="text" value={personalDraft.phone_country_code} onChange={(e) => setPersonalDraft({ ...personalDraft, phone_country_code: e.target.value })} placeholder="+1" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Phone number</label>
+                    <input type="tel" value={personalDraft.phone_number} onChange={(e) => setPersonalDraft({ ...personalDraft, phone_number: e.target.value })} placeholder="5551234567" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Date of birth (DD-MMM-YYYY)</label>
+                  <input type="text" value={personalDraft.date_of_birth} onChange={(e) => setPersonalDraft({ ...personalDraft, date_of_birth: e.target.value })} placeholder="23-Aug-1990" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  {(() => {
+                    const parsed = parseDOBInput(personalDraft.date_of_birth);
+                    const age = parsed ? calcAge(parsed) : null;
+                    return age ? (
+                      <span className="text-xs mt-1.5 block" style={{ color: COLORS.inkSoft }}>{age.years} years, {age.months} months old</span>
+                    ) : personalDraft.date_of_birth ? (
+                      <span className="text-xs mt-1.5 block" style={{ color: COLORS.high }}>Format not recognized — use DD-MMM-YYYY, e.g. 23-Aug-1990</span>
+                    ) : null;
+                  })()}
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Sex</label>
+                  <select value={personalDraft.sex} onChange={(e) => setPersonalDraft({ ...personalDraft, sex: e.target.value })} className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}>
+                    <option value="">Select...</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Height (ft)</label>
+                    <input type="number" value={personalDraft.height_ft} onChange={(e) => setPersonalDraft({ ...personalDraft, height_ft: e.target.value })} placeholder="5" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Height (in)</label>
+                    <input type="number" value={personalDraft.height_in} onChange={(e) => setPersonalDraft({ ...personalDraft, height_in: e.target.value })} placeholder="9" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Current weight (kg)</label>
+                  <div className="flex items-center gap-2">
+                    <input type="number" step="0.1" value={personalDraft.current_weight_kg} onChange={(e) => setPersonalDraft({ ...personalDraft, current_weight_kg: e.target.value })} placeholder="75" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                    <span className="text-xs flex-shrink-0" style={{ color: COLORS.inkSoft }}>kg</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>City</label>
+                    <input type="text" value={personalDraft.city} onChange={(e) => setPersonalDraft({ ...personalDraft, city: e.target.value })} placeholder="Austin" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Country</label>
+                    <input type="text" value={personalDraft.country} onChange={(e) => setPersonalDraft({ ...personalDraft, country: e.target.value })} placeholder="USA" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Emergency code</label>
+                    <input type="text" value={personalDraft.emergency_country_code} onChange={(e) => setPersonalDraft({ ...personalDraft, emergency_country_code: e.target.value })} placeholder="+1" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Emergency contact number</label>
+                    <input type="tel" value={personalDraft.emergency_number} onChange={(e) => setPersonalDraft({ ...personalDraft, emergency_number: e.target.value })} placeholder="5559876543" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Blood group</label>
+                  <input type="text" value={personalDraft.blood_group} onChange={(e) => setPersonalDraft({ ...personalDraft, blood_group: e.target.value })} placeholder="O+" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <div className="mb-3">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Allergies</label>
+                  <textarea value={personalDraft.allergies} onChange={(e) => setPersonalDraft({ ...personalDraft, allergies: e.target.value })} rows={2} placeholder="Penicillin, pollen, ..." className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Food allergies / Intolerance</label>
+                  <textarea value={personalDraft.food_allergies} onChange={(e) => setPersonalDraft({ ...personalDraft, food_allergies: e.target.value })} rows={2} placeholder="Peanuts, lactose, gluten, ..." className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
+                  {personalSaved ? <Check size={14} /> : <Plus size={14} />} {personalSaved ? "Saved" : "Save"}
+                </button>
+
+                <div className="rounded-xl p-3.5 mb-5" style={{ background: COLORS.surfaceAlt }}>
+                  <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
+                  <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
+                </div>
+
+                <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                  <LogOut size={14} /> Log out
+                </button>
+              </>
+            )}
+
+            {profileSubTab === "medical" && (
+              <>
+                {MEDICAL_FIELDS.map((f) => (
+                  <div className="mb-3" key={f.key}>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>{f.label}</label>
+                    <textarea
+                      value={medicalFields[f.key]}
+                      onChange={(e) => setMedicalFields({ ...medicalFields, [f.key]: e.target.value })}
+                      rows={2}
+                      className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-none"
+                      style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                      placeholder="None"
+                    />
+                  </div>
+                ))}
+
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Additional notes</label>
+                  <textarea
+                    value={medicalDraft}
+                    onChange={(e) => setMedicalDraft(e.target.value)}
+                    rows={4}
+                    className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none"
+                    style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                    placeholder="Anything else worth noting..."
+                  />
+                </div>
+
+                <button onClick={saveMedicalBackground} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                  {medicalSaved ? <Check size={14} /> : <Plus size={14} />} {medicalSaved ? "Saved" : "Save"}
+                </button>
+              </>
+            )}
+
+            {profileSubTab === "family" && (
+              <>
+                <textarea
+                  value={familyDraft}
+                  onChange={(e) => setFamilyDraft(e.target.value)}
+                  rows={6}
+                  className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none"
+                  style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                  placeholder="Family history of heart disease, diabetes, cancer, or other relevant conditions..."
+                />
+                <button onClick={saveFamilyHistory} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                  {familySaved ? <Check size={14} /> : <Plus size={14} />} {familySaved ? "Saved" : "Save"}
+                </button>
+              </>
+            )}
           </Card>
         )}
       </div>
