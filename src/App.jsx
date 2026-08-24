@@ -1,6 +1,35 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  Heart,
+  Share2,
+  LogOut,
+  Plus,
+  Lock,
+  Mail,
+  Activity,
+  Droplet,
+  FileText,
+  Check,
+  User,
+  Scale,
+  Footprints,
+  Dumbbell,
+  Moon,
+  HeartPulse,
+  ArrowLeft,
+  Home,
+  FlaskConical,
+  Stethoscope,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import { supabase } from "./supabaseClient";
 
 const COLORS = {
@@ -35,6 +64,7 @@ function categorizeBP(sys, dia) {
 
 function categorizeSugar(typeId, value) {
   const t = SUGAR_TYPES.find((s) => s.id === typeId);
+  if (!t) return { label: "Normal", color: COLORS.normal };
   const [b1, b2] = t.breaks;
   if (value >= b2) return { label: "Diabetes range", color: COLORS.high };
   if (value >= b1) return { label: "Prediabetes range", color: COLORS.elevated };
@@ -59,8 +89,11 @@ function daysAgoLabel(iso) {
 
 function formatDate(iso) {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
-    ", " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return (
+    d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+    ", " +
+    d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+  );
 }
 
 function shortDate(iso) {
@@ -103,7 +136,6 @@ function parseDOBInput(str) {
   const monthIndex = MONTHS.findIndex((mo) => mo.toLowerCase() === m[2].toLowerCase());
   const year = parseInt(m[3], 10);
   if (monthIndex === -1 || day < 1 || day > 31) return null;
-  const d = new Date(year, monthIndex, day);
   return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
@@ -114,7 +146,10 @@ function calcAge(isoDate) {
   let years = now.getFullYear() - dob.getFullYear();
   let months = now.getMonth() - dob.getMonth();
   if (now.getDate() < dob.getDate()) months--;
-  if (months < 0) { years--; months += 12; }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
   if (years < 0) return null;
   return { years, months };
 }
@@ -172,7 +207,9 @@ function MetricCard({ label, value, unit, zoneLabel, zoneColor }) {
         )}
       </div>
       <div className="flex items-baseline gap-1.5">
-        <span style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-2xl font-bold">{value}</span>
+        <span style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-2xl font-bold">
+          {value}
+        </span>
         <span className="text-xs" style={{ color: COLORS.inkSoft }}>{unit}</span>
       </div>
     </div>
@@ -192,12 +229,12 @@ function SugarSummaryCard({ reading }) {
   return (
     <div className="rounded-2xl p-4 flex-1" style={{ background: COLORS.surfaceAlt }}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold tracking-wide" style={{ color: COLORS.inkSoft }}>{t.label.toUpperCase()}</span>
+        <span className="text-xs font-semibold tracking-wide" style={{ color: COLORS.inkSoft }}>{t?.label?.toUpperCase() || "SUGAR"}</span>
         <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: z.color + "1a", color: z.color }}>{z.label}</span>
       </div>
       <div className="flex items-baseline gap-1.5 mb-2">
         <span style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-2xl font-bold">{reading.value}</span>
-        <span className="text-xs" style={{ color: COLORS.inkSoft }}>{t.unit}</span>
+        <span className="text-xs" style={{ color: COLORS.inkSoft }}>{t?.unit}</span>
       </div>
       <div className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(reading.created_at)} · {daysAgoLabel(reading.created_at)}</div>
     </div>
@@ -593,13 +630,19 @@ export default function App() {
   return (
     <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
       <div className="max-w-2xl mx-auto p-5 pb-28">
-        <div className="flex items-center gap-2.5 mb-7">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
-            <Heart size={16} color="#fff" fill="#ffffff33" />
+        <div className="flex items-center justify-between mb-7">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
+              <Heart size={16} color="#fff" fill="#ffffff33" />
+            </div>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-xl">Cuff</span>
           </div>
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-xl">Cuff</span>
+          <button onClick={handleLogout} className="p-2 rounded-xl text-xs flex items-center gap-1 font-medium" style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, color: COLORS.inkSoft }}>
+            <LogOut size={14} /> Logout
+          </button>
         </div>
 
+        {/* HOME TAB */}
         {activeTab === "home" && (
           <>
             {latestWeight ? (
@@ -646,552 +689,162 @@ export default function App() {
               </Card>
             ) : (
               <Card>
-                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No data yet. Log your first reading from the Activity or Lab tab.</p>
-              </Card>
-            )}
-          </>
-        )}
-
-        {activeTab === "activity" && (
-          <>
-            {(latestSteps || latestWorkoutWeight || latestWorkoutCardio || latestSleep || latestHeartRate) && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Footprints size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Activity</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                  <MetricCard label="Steps" value={latestSteps ? latestSteps.value.toLocaleString() : "—"} unit="today" />
-                  <MetricCard label="Sleep" value={latestSleep ? latestSleep.hours : "—"} unit="hrs" />
-                  <MetricCard
-                    label="Heart rate"
-                    value={latestHeartRate ? `${latestHeartRate.min_bpm}–${latestHeartRate.max_bpm}` : "—"}
-                    unit="bpm"
-                  />
-                </div>
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
-                <div className="grid grid-cols-2 gap-3">
-                  <MetricCard label="Weight" value={latestWorkoutWeight ? latestWorkoutWeight.minutes : "—"} unit="min" />
-                  <MetricCard label="Cardio / Walk" value={latestWorkoutCardio ? latestWorkoutCardio.minutes : "—"} unit="min" />
-                </div>
-              </Card>
-            )}
-
-            {profile.role === "Patient" && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Footprints size={16} color={COLORS.primary} />
-                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log activity</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Steps</label>
-                    <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Sleep (hrs)</label>
-                    <input type="number" step="0.1" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Weight</label>
-                    <input type="number" value={workoutWeightValue} onChange={(e) => setWorkoutWeightValue(e.target.value)} placeholder="30" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Cardio / Walk</label>
-                    <input type="number" value={workoutCardioValue} onChange={(e) => setWorkoutCardioValue(e.target.value)} placeholder="20" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>DAILY HEART RATE</span>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Min (bpm)</label>
-                    <input type="number" value={hrMinValue} onChange={(e) => setHrMinValue(e.target.value)} placeholder="58" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Max (bpm)</label>
-                    <input type="number" value={hrMaxValue} onChange={(e) => setHrMaxValue(e.target.value)} placeholder="142" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => { addStepsReading(); addWorkoutReadings(); addSleepReading(); addHeartRateReading(); }}
-                  className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium"
-                  style={{ background: COLORS.ink, color: "#fff" }}
-                >
-                  <Plus size={14} /> Save activity
-                </button>
-              </Card>
-            )}
-
-            {stepsReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Steps history</span>
-                <HistoryBarChart data={stepsReadings} dataKey="value" unit=" steps" colorForEntry={() => COLORS.primary} />
-              </Card>
-            )}
-
-            {workoutReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Workout minutes history</span>
-                <div className="flex flex-col gap-5">
-                  {["weight", "cardio"].map((type) => {
-                    const entries = workoutReadings.filter((r) => r.type === type);
-                    return (
-                      <div key={type}>
-                        <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>
-                          {type === "weight" ? "WEIGHT" : "CARDIO / WALK"}
-                        </span>
-                        {entries.length === 0 ? (
-                          <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No entries yet</div>
-                        ) : (
-                          <HistoryBarChart
-                            data={entries}
-                            dataKey="minutes"
-                            unit=" min"
-                            colorForEntry={() => (type === "weight" ? COLORS.elevated : COLORS.normal)}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-
-            {sleepReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Sleep history</span>
-                <HistoryBarChart data={sleepReadings} dataKey="hours" unit=" hrs" colorForEntry={() => COLORS.primarySoft} />
-              </Card>
-            )}
-
-            {heartRateReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Heart rate history</span>
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={heartRateReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                    <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip
-                      cursor={{ fill: COLORS.surfaceAlt }}
-                      contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
-                      labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
-                    />
-                    <Bar dataKey="min_bpm" name="Min" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-            )}
-          </>
-        )}
-
-        {activeTab === "lab" && (
-          <>
-            {(latestFasting || latestNonFasting || latestA1c) && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Droplet size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <SugarSummaryCard reading={latestFasting} />
-                  <SugarSummaryCard reading={latestNonFasting} />
-                  <SugarSummaryCard reading={latestA1c} />
-                </div>
-              </Card>
-            )}
-
-            {latestBp && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Heart size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
-                </div>
-                <div className="rounded-2xl py-6 mb-4 flex flex-col items-center" style={{ background: COLORS.surfaceAlt }}>
-                  <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT READING</span>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-5xl font-bold">
-                    {latestBp.systolic}<span style={{ color: COLORS.inkSoft, fontWeight: 500 }}>/{latestBp.diastolic}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
-                    <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <MetricCard label="Systolic" value={latestBp.systolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
-                  <MetricCard label="Diastolic" value={latestBp.diastolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
-                  <MetricCard label="Pulse" value={latestBp.pulse} unit="bpm" zoneLabel={pulseZone(latestBp.pulse).label} zoneColor={pulseZone(latestBp.pulse).color} />
-                </div>
-              </Card>
-            )}
-
-            {profile.role === "Patient" && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity size={16} color={COLORS.primary} />
-                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood pressure</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Systolic</label>
-                    <input type="number" value={sys} onChange={(e) => setSys(e.target.value)} placeholder="120" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Diastolic</label>
-                    <input type="number" value={dia} onChange={(e) => setDia(e.target.value)} placeholder="80" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Pulse</label>
-                    <input type="number" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="72" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                </div>
-                <button onClick={addBpReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-                  <Plus size={14} /> Save blood pressure
-                </button>
-              </Card>
-            )}
-
-            {profile.role === "Patient" && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Droplet size={16} color={COLORS.primary} />
-                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood sugar</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Fasting</label>
-                    <input type="number" value={fastingValue} onChange={(e) => setFastingValue(e.target.value)} placeholder="95" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Non-fasting</label>
-                    <input type="number" value={nonFastingValue} onChange={(e) => setNonFastingValue(e.target.value)} placeholder="130" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
-                    <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="5.6" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                </div>
-                <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-                  <Plus size={14} /> Save blood sugar
-                </button>
-              </Card>
-            )}
-
-            {bpReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure history</span>
-                <HistoryBarChart
-                  data={bpReadings}
-                  dataKey="systolic"
-                  unit=""
-                  colorForEntry={(r) => categorizeBP(r.systolic, r.diastolic).color}
-                />
-              </Card>
-            )}
-
-            {sugarReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar history</span>
-                <div className="flex flex-col gap-5">
-                  {SUGAR_TYPES.map((t) => {
-                    const entries = sugarReadings.filter((r) => r.type === t.id);
-                    return (
-                      <div key={t.id}>
-                        <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>{t.label.toUpperCase()}</span>
-                        {entries.length === 0 ? (
-                          <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No readings yet</div>
-                        ) : (
-                          <HistoryBarChart
-                            data={entries}
-                            dataKey="value"
-                            unit={t.unit === "%" ? "%" : ` ${t.unit}`}
-                            colorForEntry={(r) => categorizeSugar(t.id, r.value).color}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-          </>
-        )}
-
-        {activeTab === "doctor" && (
-          <>
-            {profile.role === "Doctor" && (
-              <Card>
-                <label className="text-xs font-semibold block mb-2" style={{ color: COLORS.inkSoft }}>VIEWING PATIENT</label>
-                <select value={selectedPatientId || ""} onChange={(e) => setSelectedPatientId(e.target.value)} className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}>
-                  {patients.length === 0 && <option>No patients yet</option>}
-                  {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No weight data yet. Log your first reading from the Activity tab.</p>
               </Card>
             )}
 
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <FileText size={16} color={COLORS.primary} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Prescription</span>
+                <HeartPulse size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood Pressure</span>
               </div>
-
-              {profile.role === "Doctor" && (
-                <>
-                  <textarea value={prescriptionDraft} onChange={(e) => setPrescriptionDraft(e.target.value)} rows={4} className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} placeholder="Write instructions for your patient..." />
-                  <button onClick={savePrescription} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
-                    {prescriptionSaved ? <Check size={14} /> : <Plus size={14} />} {prescriptionSaved ? "Saved" : "Save prescription"}
-                  </button>
-                </>
-              )}
-
-              <div className="mb-4">
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>CURRENT</span>
-                {currentPrescription ? (
-                  <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
-                    <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
-                    <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(currentPrescription.updated_at)} · {daysAgoLabel(currentPrescription.updated_at)}</div>
-                  </div>
-                ) : (
-                  <p className="text-sm" style={{ color: COLORS.inkSoft }}>No prescription yet.</p>
-                )}
-              </div>
-
-              {pastPrescriptions.length > 0 && (
-                <div>
-                  <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>PAST</span>
-                  <div className="flex flex-col gap-2">
-                    {pastPrescriptions.map((p) => (
-                      <div key={p.id} className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt, opacity: 0.75 }}>
-                        <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{p.text}</p>
-                        <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(p.updated_at)} · {daysAgoLabel(p.updated_at)}</div>
-                      </div>
-                    ))}
-                  </div>
+              {latestBp ? (
+                <div className="flex gap-3">
+                  <MetricCard label="Systolic / Diastolic" value={`${latestBp.systolic}/${latestBp.diastolic}`} unit="mmHg" zoneLabel={latestBpZone?.label} zoneColor={latestBpZone?.color} />
+                  <MetricCard label="Pulse" value={latestBp.pulse} unit="bpm" zoneLabel={pulseZone(latestBp.pulse).label} zoneColor={pulseZone(latestBp.pulse).color} />
                 </div>
+              ) : (
+                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No BP readings recorded yet.</p>
               )}
             </Card>
           </>
         )}
 
+        {/* ACTIVITY TAB */}
+        {activeTab === "activity" && (
+          <>
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <Footprints size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Log Daily Activity</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>STEPS</label>
+                  <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>SLEEP (HOURS)</label>
+                  <input type="number" step="0.5" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+              </div>
+              <div className="flex gap-2 mb-4">
+                <button onClick={addStepsReading} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Log Steps</button>
+                <button onClick={addSleepReading} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Log Sleep</button>
+              </div>
+
+              <hr className="my-4" style={{ borderColor: COLORS.border }} />
+
+              <span className="text-xs font-semibold block mb-2" style={{ color: COLORS.inkSoft }}>LOG WEIGHT (KG)</span>
+              <div className="flex gap-2">
+                <input type="number" step="0.1" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} placeholder="70.5" className="flex-1 p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                <button onClick={addWeightReading} className="px-4 py-2.5 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Save Weight</button>
+              </div>
+            </Card>
+          </>
+        )}
+
+        {/* LAB TAB */}
+        {activeTab === "lab" && (
+          <>
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <Droplet size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood Sugar & Labs</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <div>
+                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>FASTING</label>
+                  <input type="number" value={fastingValue} onChange={(e) => setFastingValue(e.target.value)} placeholder="mg/dL" className="w-full p-2 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>NON-FASTING</label>
+                  <input type="number" value={nonFastingValue} onChange={(e) => setNonFastingValue(e.target.value)} placeholder="mg/dL" className="w-full p-2 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
+                  <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="%" className="w-full p-2 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+              </div>
+              <button onClick={addSugarReadings} className="w-full py-2.5 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Save Readings</button>
+            </Card>
+
+            <div className="flex gap-3">
+              <SugarSummaryCard reading={latestFasting} />
+              <SugarSummaryCard reading={latestNonFasting} />
+            </div>
+          </>
+        )}
+
+        {/* DOCTOR TAB */}
+        {activeTab === "doctor" && (
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <Stethoscope size={16} color={COLORS.primary} />
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Prescriptions & Notes</span>
+            </div>
+            {profile?.role === "Doctor" && (
+              <div className="mb-4">
+                <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>SELECT PATIENT</label>
+                <select value={selectedPatientId || ""} onChange={(e) => setSelectedPatientId(e.target.value)} className="w-full p-2.5 rounded-xl text-sm outline-none mb-3" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name || p.email}</option>
+                  ))}
+                </select>
+                <textarea rows={3} value={prescriptionDraft} onChange={(e) => setPrescriptionDraft(e.target.value)} placeholder="Write prescription instructions here..." className="w-full p-3 rounded-xl text-sm outline-none mb-2" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                <button onClick={savePrescription} className="py-2 px-4 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>
+                  {prescriptionSaved ? "Saved!" : "Issue Prescription"}
+                </button>
+              </div>
+            )}
+            {currentPrescription ? (
+              <div className="p-4 rounded-2xl" style={{ background: COLORS.surfaceAlt }}>
+                <p className="text-sm font-medium mb-1" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
+                <span className="text-xs" style={{ color: COLORS.inkSoft }}>Issued on {formatDate(currentPrescription.updated_at || currentPrescription.created_at)}</span>
+              </div>
+            ) : (
+              <p className="text-sm" style={{ color: COLORS.inkSoft }}>No active prescriptions available.</p>
+            )}
+          </Card>
+        )}
+
+        {/* PROFILE TAB */}
         {activeTab === "profile" && (
           <Card>
             <div className="flex items-center gap-2 mb-4">
               <User size={16} color={COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile</span>
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>User Profile</span>
             </div>
-
-            <div className="flex gap-2 mb-5">
-              {[
-                { id: "personal", label: "Personal" },
-                { id: "medical", label: "Medical background" },
-                { id: "family", label: "Family history" },
-              ].map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setProfileSubTab(t.id)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                  style={
-                    profileSubTab === t.id
-                      ? { background: COLORS.ink, color: "#fff" }
-                      : { background: COLORS.surfaceAlt, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
-                  }
-                >
-                  {t.label}
-                </button>
-              ))}
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>FIRST NAME</label>
+                <input type="text" value={personalDraft.first_name} onChange={(e) => setPersonalDraft({ ...personalDraft, first_name: e.target.value })} className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+              </div>
+              <div>
+                <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>LAST NAME</label>
+                <input type="text" value={personalDraft.last_name} onChange={(e) => setPersonalDraft({ ...personalDraft, last_name: e.target.value })} className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+              </div>
+              <button onClick={savePersonal} className="py-2.5 px-5 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>
+                {personalSaved ? "Saved!" : "Save Profile"}
+              </button>
             </div>
-
-            {profileSubTab === "personal" && (
-              <>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>First name</label>
-                    <input type="text" value={personalDraft.first_name} onChange={(e) => setPersonalDraft({ ...personalDraft, first_name: e.target.value })} placeholder="Alex" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Last name</label>
-                    <input type="text" value={personalDraft.last_name} onChange={(e) => setPersonalDraft({ ...personalDraft, last_name: e.target.value })} placeholder="Rivera" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Occupation</label>
-                  <input type="text" value={personalDraft.occupation} onChange={(e) => setPersonalDraft({ ...personalDraft, occupation: e.target.value })} placeholder="Software Engineer" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                </div>
-
-                <div className="mb-3">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Email</label>
-                  <input type="email" value={personalDraft.contact_email} onChange={(e) => setPersonalDraft({ ...personalDraft, contact_email: e.target.value })} placeholder="alex@example.com" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Country code</label>
-                    <input type="text" value={personalDraft.phone_country_code} onChange={(e) => setPersonalDraft({ ...personalDraft, phone_country_code: e.target.value })} placeholder="+1" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Phone number</label>
-                    <input type="tel" value={personalDraft.phone_number} onChange={(e) => setPersonalDraft({ ...personalDraft, phone_number: e.target.value })} placeholder="5551234567" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Date of birth (DD-MMM-YYYY)</label>
-                  <input type="text" value={personalDraft.date_of_birth} onChange={(e) => setPersonalDraft({ ...personalDraft, date_of_birth: e.target.value })} placeholder="23-Aug-1990" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  {(() => {
-                    const parsed = parseDOBInput(personalDraft.date_of_birth);
-                    const age = parsed ? calcAge(parsed) : null;
-                    return age ? (
-                      <span className="text-xs mt-1.5 block" style={{ color: COLORS.inkSoft }}>{age.years} years, {age.months} months old</span>
-                    ) : personalDraft.date_of_birth ? (
-                      <span className="text-xs mt-1.5 block" style={{ color: COLORS.high }}>Format not recognized — use DD-MMM-YYYY, e.g. 23-Aug-1990</span>
-                    ) : null;
-                  })()}
-                </div>
-
-                <div className="mb-3">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Sex</label>
-                  <select value={personalDraft.sex} onChange={(e) => setPersonalDraft({ ...personalDraft, sex: e.target.value })} className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}>
-                    <option value="">Select...</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Others">Others</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Height (ft)</label>
-                    <input type="number" value={personalDraft.height_ft} onChange={(e) => setPersonalDraft({ ...personalDraft, height_ft: e.target.value })} placeholder="5" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Height (in)</label>
-                    <input type="number" value={personalDraft.height_in} onChange={(e) => setPersonalDraft({ ...personalDraft, height_in: e.target.value })} placeholder="9" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Current weight (kg)</label>
-                  <div className="flex items-center gap-2">
-                    <input type="number" step="0.1" value={personalDraft.current_weight_kg} onChange={(e) => setPersonalDraft({ ...personalDraft, current_weight_kg: e.target.value })} placeholder="75" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                    <span className="text-xs flex-shrink-0" style={{ color: COLORS.inkSoft }}>kg</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>City</label>
-                    <input type="text" value={personalDraft.city} onChange={(e) => setPersonalDraft({ ...personalDraft, city: e.target.value })} placeholder="Austin" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Country</label>
-                    <input type="text" value={personalDraft.country} onChange={(e) => setPersonalDraft({ ...personalDraft, country: e.target.value })} placeholder="USA" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 mb-3">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Emergency code</label>
-                    <input type="text" value={personalDraft.emergency_country_code} onChange={(e) => setPersonalDraft({ ...personalDraft, emergency_country_code: e.target.value })} placeholder="+1" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Emergency contact number</label>
-                    <input type="tel" value={personalDraft.emergency_number} onChange={(e) => setPersonalDraft({ ...personalDraft, emergency_number: e.target.value })} placeholder="5559876543" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Blood group</label>
-                  <input type="text" value={personalDraft.blood_group} onChange={(e) => setPersonalDraft({ ...personalDraft, blood_group: e.target.value })} placeholder="O+" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                </div>
-
-                <div className="mb-3">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Allergies</label>
-                  <textarea value={personalDraft.allergies} onChange={(e) => setPersonalDraft({ ...personalDraft, allergies: e.target.value })} rows={2} placeholder="Penicillin, pollen, ..." className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                </div>
-
-                <div className="mb-4">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Food allergies / Intolerance</label>
-                  <textarea value={personalDraft.food_allergies} onChange={(e) => setPersonalDraft({ ...personalDraft, food_allergies: e.target.value })} rows={2} placeholder="Peanuts, lactose, gluten, ..." className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                </div>
-
-                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
-                  {personalSaved ? <Check size={14} /> : <Plus size={14} />} {personalSaved ? "Saved" : "Save"}
-                </button>
-
-                <div className="rounded-xl p-3.5 mb-5" style={{ background: COLORS.surfaceAlt }}>
-                  <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
-                  <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
-                </div>
-
-                <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
-                  <LogOut size={14} /> Log out
-                </button>
-              </>
-            )}
-
-            {profileSubTab === "medical" && (
-              <>
-                {MEDICAL_FIELDS.map((f) => (
-                  <div className="mb-3" key={f.key}>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>{f.label}</label>
-                    <textarea
-                      value={medicalFields[f.key]}
-                      onChange={(e) => setMedicalFields({ ...medicalFields, [f.key]: e.target.value })}
-                      rows={2}
-                      className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none resize-none"
-                      style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
-                      placeholder="None"
-                    />
-                  </div>
-                ))}
-
-                <div className="mb-4">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Additional notes</label>
-                  <textarea
-                    value={medicalDraft}
-                    onChange={(e) => setMedicalDraft(e.target.value)}
-                    rows={4}
-                    className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none"
-                    style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
-                    placeholder="Anything else worth noting..."
-                  />
-                </div>
-
-                <button onClick={saveMedicalBackground} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-                  {medicalSaved ? <Check size={14} /> : <Plus size={14} />} {medicalSaved ? "Saved" : "Save"}
-                </button>
-              </>
-            )}
-
-            {profileSubTab === "family" && (
-              <>
-                <textarea
-                  value={familyDraft}
-                  onChange={(e) => setFamilyDraft(e.target.value)}
-                  rows={6}
-                  className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none"
-                  style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
-                  placeholder="Family history of heart disease, diabetes, cancer, or other relevant conditions..."
-                />
-                <button onClick={saveFamilyHistory} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-                  {familySaved ? <Check size={14} /> : <Plus size={14} />} {familySaved ? "Saved" : "Save"}
-                </button>
-              </>
-            )}
           </Card>
         )}
       </div>
 
-      <div
-        className="fixed bottom-0 left-0 right-0 flex justify-around items-center py-2"
-        style={{ background: COLORS.surface, borderTop: `1px solid ${COLORS.border}`, boxShadow: "0 -4px 16px rgba(22,35,31,0.06)" }}
-      >
+      {/* BOTTOM NAVIGATION BAR */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto p-3 flex justify-around items-center" style={{ background: COLORS.surface, borderTop: `1px solid ${COLORS.border}` }}>
         {NAV_ITEMS.map(({ id, label, Icon }) => {
-          const active = activeTab === id;
+          const isActive = activeTab === id;
           return (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl"
+              className="flex flex-col items-center gap-1 transition-colors"
+              style={{ color: isActive ? COLORS.primary : COLORS.inkSoft }}
             >
-              <Icon size={20} color={active ? COLORS.primary : COLORS.inkSoft} strokeWidth={active ? 2.4 : 2} />
-              <span className="text-[10px] font-semibold" style={{ color: active ? COLORS.primary : COLORS.inkSoft }}>{label}</span>
+              <Icon size={20} />
+              <span className="text-[10px] font-medium">{label}</span>
             </button>
           );
         })}
