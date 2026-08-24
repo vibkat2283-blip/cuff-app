@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope } from "lucide-react";
+import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
 
@@ -193,6 +193,21 @@ function MetricCard({ label, value, unit, zoneLabel, zoneColor }) {
   );
 }
 
+function AtAGlanceTile({ Icon, label, value, dotColor, onClick }) {
+  return (
+    <button onClick={onClick} className="rounded-2xl p-3 flex flex-col gap-2 text-left w-full" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+      <div className="flex items-center justify-between">
+        <Icon size={14} color={COLORS.inkSoft} />
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+      </div>
+      <div>
+        <div className="text-sm font-bold truncate" style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }}>{value}</div>
+        <div className="text-[10px] font-semibold" style={{ color: COLORS.inkSoft }}>{label}</div>
+      </div>
+    </button>
+  );
+}
+
 function SugarSummaryCard({ reading }) {
   if (!reading) {
     return (
@@ -269,6 +284,10 @@ export default function App() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [prescriptionDraft, setPrescriptionDraft] = useState("");
   const [prescriptionSaved, setPrescriptionSaved] = useState(false);
+  const [doctorSubTab, setDoctorSubTab] = useState("prescription"); // 'prescription' | 'messages'
+  const [messages, setMessages] = useState([]);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [doctorHasUnreadMessages, setDoctorHasUnreadMessages] = useState(false);
 
   const [sys, setSys] = useState("");
   const [dia, setDia] = useState("");
@@ -355,7 +374,24 @@ export default function App() {
         setPrescriptions(data || []);
         setPrescriptionDraft(data && data[0] ? data[0].text : "");
       });
+    supabase.from("messages").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
+      .then(({ data }) => setMessages(data || []));
   }, [activePatientId]);
+
+  // Doctors: check for any unread patient message across all patients, not just the one currently selected
+  useEffect(() => {
+    if (profile?.role !== "Doctor") { setDoctorHasUnreadMessages(false); return; }
+    let query = supabase.from("messages").select("id").eq("sender_role", "Patient").limit(1);
+    if (profile.last_seen_messages_at) query = query.gt("created_at", profile.last_seen_messages_at);
+    query.then(({ data }) => setDoctorHasUnreadMessages(!!(data && data.length > 0)));
+  }, [profile]);
+
+  // Mark prescriptions/messages as seen once the relevant sub-tab is opened
+  useEffect(() => {
+    if (!profile || activeTab !== "doctor") return;
+    if (doctorSubTab === "messages") markMessagesSeen();
+    else if (doctorSubTab === "prescription" && profile.role === "Patient") markPrescriptionsSeen();
+  }, [activeTab, doctorSubTab, profile?.id]);
 
   const handleAuth = async () => {
     setAuthError("");
@@ -492,8 +528,44 @@ export default function App() {
     setTimeout(() => setPrescriptionSaved(false), 1800);
   };
 
+  const sendMessage = async () => {
+    if (!messageDraft.trim() || !activePatientId) return;
+    const { data } = await supabase.from("messages").insert({
+      patient_id: activePatientId, sender_id: profile.id, sender_role: profile.role, text: messageDraft.trim(),
+    }).select();
+    if (data) setMessages([...messages, ...data]);
+    setMessageDraft("");
+  };
+
+  const markMessagesSeen = async () => {
+    const { data } = await supabase.from("profiles").update({ last_seen_messages_at: new Date().toISOString() }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
+  };
+
+  const markPrescriptionsSeen = async () => {
+    const { data } = await supabase.from("profiles").update({ last_seen_prescriptions_at: new Date().toISOString() }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
+  };
+
+  const handleBellClick = () => {
+    setActiveTab("doctor");
+    if (profile.role === "Doctor") {
+      setDoctorSubTab("messages");
+      return;
+    }
+    const messageUnread = latestMessage && latestMessage.sender_role === "Doctor" &&
+      (!profile.last_seen_messages_at || new Date(latestMessage.created_at) > new Date(profile.last_seen_messages_at));
+    setDoctorSubTab(messageUnread ? "messages" : "prescription");
+  };
+
   const currentPrescription = prescriptions[0];
   const pastPrescriptions = prescriptions.slice(1);
+  const latestMessage = messages[messages.length - 1];
+  const patientHasUnread = profile?.role === "Patient" && !!(
+    (currentPrescription && (!profile.last_seen_prescriptions_at || new Date(currentPrescription.updated_at) > new Date(profile.last_seen_prescriptions_at))) ||
+    (latestMessage && latestMessage.sender_role === "Doctor" && (!profile.last_seen_messages_at || new Date(latestMessage.created_at) > new Date(profile.last_seen_messages_at)))
+  );
+  const hasUnread = profile?.role === "Doctor" ? doctorHasUnreadMessages : patientHasUnread;
 
   const latestBp = bpReadings[bpReadings.length - 1];
   const latestBpZone = latestBp ? categorizeBP(latestBp.systolic, latestBp.diastolic) : null;
@@ -507,6 +579,27 @@ export default function App() {
   const latestFasting = [...sugarReadings].reverse().find((r) => r.type === "fasting");
   const latestNonFasting = [...sugarReadings].reverse().find((r) => r.type === "nonfasting");
   const latestA1c = [...sugarReadings].reverse().find((r) => r.type === "a1c");
+  const latestSugarReading = [latestFasting, latestNonFasting, latestA1c]
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+  const latestSugarZone = latestSugarReading ? categorizeSugar(latestSugarReading.type, latestSugarReading.value) : null;
+  const latestSugarUnit = latestSugarReading ? SUGAR_TYPES.find((s) => s.id === latestSugarReading.type).unit : "";
+  const heartRateZoneColor = latestHeartRate
+    ? (latestHeartRate.min_bpm < 60 || latestHeartRate.max_bpm > 100 ? COLORS.elevated : COLORS.normal)
+    : COLORS.muted;
+
+  const outOfRangeAlerts = [];
+  if (latestBp && ["High, Stage 1", "High, Stage 2", "Crisis"].includes(latestBpZone.label)) {
+    outOfRangeAlerts.push(`Blood pressure is ${latestBpZone.label.toLowerCase()} (${latestBp.systolic}/${latestBp.diastolic} mmHg)`);
+  }
+  [latestFasting, latestNonFasting, latestA1c].forEach((r) => {
+    if (!r) return;
+    const z = categorizeSugar(r.type, r.value);
+    if (z.label !== "Normal") {
+      const t = SUGAR_TYPES.find((s) => s.id === r.type);
+      outOfRangeAlerts.push(`${t.label} sugar is in the ${z.label.toLowerCase()} (${r.value}${t.unit === "%" ? "%" : ` ${t.unit}`})`);
+    }
+  });
 
   // ---------- AUTH SCREEN ----------
   if (!session || !profile) {
@@ -593,6 +686,18 @@ export default function App() {
             ) : (
               <p className="text-sm" style={{ color: COLORS.inkSoft }}>No weight readings yet.</p>
             )}
+
+            {profile.role === "Patient" && (
+              <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Log body weight (kg)</label>
+                <div className="flex items-center gap-2">
+                  <input type="number" step="0.1" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} placeholder="75" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                  <button onClick={addWeightReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                    <Plus size={14} /> Save
+                  </button>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>
@@ -611,15 +716,108 @@ export default function App() {
   return (
     <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
       <div className="max-w-2xl mx-auto p-5 pb-28">
-        <div className="flex items-center gap-2.5 mb-7">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
-            <Heart size={16} color="#fff" fill="#ffffff33" />
+        <div className="flex items-center justify-between mb-7">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
+              <Heart size={16} color="#fff" fill="#ffffff33" />
+            </div>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-xl">Cuff</span>
           </div>
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-xl">Cuff</span>
+          <button
+            onClick={handleBellClick}
+            className="relative w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}
+          >
+            <Bell size={16} color={COLORS.inkSoft} />
+            {hasUnread && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: COLORS.high, border: `1.5px solid ${COLORS.surface}` }} />
+            )}
+          </button>
         </div>
 
         {activeTab === "home" && (
           <>
+            {outOfRangeAlerts.length > 0 && (
+              <div className="rounded-2xl p-4 mb-5 flex items-start gap-3" style={{ background: COLORS.high + "14", border: `1px solid ${COLORS.high}` }}>
+                <AlertTriangle size={18} color={COLORS.high} className="flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  {outOfRangeAlerts.map((a, i) => (
+                    <span key={i} className="text-sm font-medium" style={{ color: COLORS.high }}>{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Card>
+              <div className="grid grid-cols-4 gap-2">
+                <AtAGlanceTile
+                  Icon={Heart}
+                  label="BP"
+                  value={latestBp ? `${latestBp.systolic}/${latestBp.diastolic}` : "—"}
+                  dotColor={latestBpZone ? latestBpZone.color : COLORS.muted}
+                  onClick={() => setActiveTab("lab")}
+                />
+                <AtAGlanceTile
+                  Icon={Droplet}
+                  label="Sugar"
+                  value={latestSugarReading ? `${latestSugarReading.value}${latestSugarUnit === "%" ? "%" : ""}` : "—"}
+                  dotColor={latestSugarZone ? latestSugarZone.color : COLORS.muted}
+                  onClick={() => setActiveTab("lab")}
+                />
+                <AtAGlanceTile
+                  Icon={Scale}
+                  label="Weight"
+                  value={latestWeight ? `${latestWeight.value}${latestWeight.unit}` : "—"}
+                  dotColor={latestWeight ? COLORS.normal : COLORS.muted}
+                  onClick={() => setPage("weightHistory")}
+                />
+                <AtAGlanceTile
+                  Icon={HeartPulse}
+                  label="Heart rate"
+                  value={latestHeartRate ? `${latestHeartRate.min_bpm}–${latestHeartRate.max_bpm}` : "—"}
+                  dotColor={heartRateZoneColor}
+                  onClick={() => setActiveTab("activity")}
+                />
+              </div>
+            </Card>
+
+            {currentPrescription && (
+              <div onClick={() => { setActiveTab("doctor"); setDoctorSubTab("prescription"); }} className="cursor-pointer active:scale-[0.99] transition-transform">
+                <Card>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText size={16} color={COLORS.primary} className="flex-shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-xs font-semibold block" style={{ color: COLORS.inkSoft }}>CURRENT PRESCRIPTION</span>
+                        <p className="text-sm truncate" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} color={COLORS.inkSoft} className="flex-shrink-0" />
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {profile.role === "Patient" && (
+              <Card>
+                <span className="text-xs font-semibold tracking-wide block mb-3" style={{ color: COLORS.inkSoft }}>QUICK LOG</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={() => setActiveTab("lab")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <Heart size={16} color={COLORS.primary} />
+                    <span className="text-xs font-medium" style={{ color: COLORS.ink }}>Log BP</span>
+                  </button>
+                  <button onClick={() => setActiveTab("lab")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <Droplet size={16} color={COLORS.primary} />
+                    <span className="text-xs font-medium" style={{ color: COLORS.ink }}>Log sugar</span>
+                  </button>
+                  <button onClick={() => setPage("weightHistory")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <Scale size={16} color={COLORS.primary} />
+                    <span className="text-xs font-medium" style={{ color: COLORS.ink }}>Log weight</span>
+                  </button>
+                </div>
+              </Card>
+            )}
+
             {latestWeight ? (
               <Card>
                 <div className="flex items-center gap-2 mb-4">
@@ -944,43 +1142,114 @@ export default function App() {
 
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <FileText size={16} color={COLORS.primary} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Prescription</span>
+                <Stethoscope size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Doctor</span>
               </div>
 
-              {profile.role === "Doctor" && (
-                <>
-                  <textarea value={prescriptionDraft} onChange={(e) => setPrescriptionDraft(e.target.value)} rows={4} className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} placeholder="Write instructions for your patient..." />
-                  <button onClick={savePrescription} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
-                    {prescriptionSaved ? <Check size={14} /> : <Plus size={14} />} {prescriptionSaved ? "Saved" : "Save prescription"}
+              <div
+                className="flex gap-2 mb-5 sticky top-0 z-10 -mx-6 px-6 py-2"
+                style={{ background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}` }}
+              >
+                {[
+                  { id: "prescription", label: "Prescription" },
+                  { id: "messages", label: "Messages" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setDoctorSubTab(t.id)}
+                    className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                    style={
+                      doctorSubTab === t.id
+                        ? { background: COLORS.ink, color: "#fff" }
+                        : { background: COLORS.surfaceAlt, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
+                    }
+                  >
+                    {t.label}
                   </button>
+                ))}
+              </div>
+
+              {doctorSubTab === "prescription" && (
+                <>
+                  {profile.role === "Doctor" && (
+                    <>
+                      <textarea value={prescriptionDraft} onChange={(e) => setPrescriptionDraft(e.target.value)} rows={4} className="w-full rounded-xl px-3.5 py-3 text-sm outline-none mb-3 resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} placeholder="Write instructions for your patient..." />
+                      <button onClick={savePrescription} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
+                        {prescriptionSaved ? <Check size={14} /> : <Plus size={14} />} {prescriptionSaved ? "Saved" : "Save prescription"}
+                      </button>
+                    </>
+                  )}
+
+                  <div className="mb-4">
+                    <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>CURRENT</span>
+                    {currentPrescription ? (
+                      <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                        <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
+                        <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(currentPrescription.updated_at)} · {daysAgoLabel(currentPrescription.updated_at)}</div>
+                      </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: COLORS.inkSoft }}>No prescription yet.</p>
+                    )}
+                  </div>
+
+                  {pastPrescriptions.length > 0 && (
+                    <div>
+                      <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>PAST</span>
+                      <div className="flex flex-col gap-2">
+                        {pastPrescriptions.map((p) => (
+                          <div key={p.id} className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt, opacity: 0.75 }}>
+                            <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{p.text}</p>
+                            <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(p.updated_at)} · {daysAgoLabel(p.updated_at)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
-              <div className="mb-4">
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>CURRENT</span>
-                {currentPrescription ? (
-                  <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
-                    <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{currentPrescription.text}</p>
-                    <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(currentPrescription.updated_at)} · {daysAgoLabel(currentPrescription.updated_at)}</div>
+              {doctorSubTab === "messages" && (
+                <>
+                  <div className="flex flex-col gap-2.5 mb-4">
+                    {messages.length === 0 ? (
+                      <p className="text-sm" style={{ color: COLORS.inkSoft }}>No messages yet.</p>
+                    ) : (
+                      messages.map((m) => {
+                        const mine = m.sender_id === profile.id;
+                        return (
+                          <div
+                            key={m.id}
+                            className="max-w-[80%] rounded-2xl px-3.5 py-2.5"
+                            style={{
+                              background: mine ? COLORS.primary : COLORS.surfaceAlt,
+                              color: mine ? "#fff" : COLORS.ink,
+                              alignSelf: mine ? "flex-end" : "flex-start",
+                            }}
+                          >
+                            <p className="text-sm leading-relaxed">{m.text}</p>
+                            <div className="text-[10px] mt-1" style={{ color: mine ? "#ffffffaa" : COLORS.inkSoft }}>
+                              {m.sender_role} · {formatDate(m.created_at)}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
-                ) : (
-                  <p className="text-sm" style={{ color: COLORS.inkSoft }}>No prescription yet.</p>
-                )}
-              </div>
-
-              {pastPrescriptions.length > 0 && (
-                <div>
-                  <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>PAST</span>
-                  <div className="flex flex-col gap-2">
-                    {pastPrescriptions.map((p) => (
-                      <div key={p.id} className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt, opacity: 0.75 }}>
-                        <p className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>{p.text}</p>
-                        <div className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>{formatDate(p.updated_at)} · {daysAgoLabel(p.updated_at)}</div>
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={messageDraft}
+                      onChange={(e) => setMessageDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") sendMessage(); }}
+                      placeholder="Write a message..."
+                      className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+                      style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                    />
+                    <button onClick={sendMessage} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                      <Send size={14} /> Send
+                    </button>
                   </div>
-                </div>
+                </>
               )}
             </Card>
           </>
@@ -993,7 +1262,20 @@ export default function App() {
               <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile</span>
             </div>
 
-            <div className="flex gap-2 mb-5">
+            <div className="flex items-center justify-between gap-3 rounded-xl p-3.5 mb-5" style={{ background: COLORS.surfaceAlt }}>
+              <div>
+                <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
+                <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
+              </div>
+              <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                <LogOut size={14} /> Log out
+              </button>
+            </div>
+
+            <div
+              className="flex gap-2 mb-5 sticky top-0 z-10 -mx-6 px-6 py-2"
+              style={{ background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}` }}
+            >
               {[
                 { id: "personal", label: "Personal" },
                 { id: "medical", label: "Medical background" },
@@ -1128,17 +1410,8 @@ export default function App() {
                   <textarea value={personalDraft.food_allergies} onChange={(e) => setPersonalDraft({ ...personalDraft, food_allergies: e.target.value })} rows={2} placeholder="Peanuts, lactose, gluten, ..." className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
-                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
+                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
                   {personalSaved ? <Check size={14} /> : <Plus size={14} />} {personalSaved ? "Saved" : "Save"}
-                </button>
-
-                <div className="rounded-xl p-3.5 mb-5" style={{ background: COLORS.surfaceAlt }}>
-                  <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
-                  <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
-                </div>
-
-                <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
-                  <LogOut size={14} /> Log out
                 </button>
               </>
             )}
