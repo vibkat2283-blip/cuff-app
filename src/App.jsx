@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight } from "lucide-react";
+import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight, Apple, CheckCircle2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
 
@@ -516,6 +516,20 @@ export default function App() {
     if (data) setProfile(data);
     setFamilySaved(true);
     setTimeout(() => setFamilySaved(false), 1800);
+  };
+
+  const connectAppleHealth = async () => {
+    const { data } = await supabase.from("profiles").update({
+      apple_health_connected: true, apple_health_connected_at: new Date().toISOString(),
+    }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
+  };
+
+  const disconnectAppleHealth = async () => {
+    const { data } = await supabase.from("profiles").update({
+      apple_health_connected: false, apple_health_connected_at: null,
+    }).eq("id", profile.id).select().single();
+    if (data) setProfile(data);
   };
 
   const savePrescription = async () => {
@@ -1273,18 +1287,19 @@ export default function App() {
             </div>
 
             <div
-              className="flex gap-2 mb-5 sticky top-0 z-10 -mx-6 px-6 py-2"
+              className="flex gap-2 mb-5 overflow-x-auto sticky top-0 z-10 -mx-6 px-6 py-2"
               style={{ background: COLORS.surface, borderBottom: `1px solid ${COLORS.border}` }}
             >
               {[
                 { id: "personal", label: "Personal" },
                 { id: "medical", label: "Medical background" },
                 { id: "family", label: "Family history" },
+                { id: "sensors", label: "Connect Sensor" },
               ].map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setProfileSubTab(t.id)}
-                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex-shrink-0"
                   style={
                     profileSubTab === t.id
                       ? { background: COLORS.ink, color: "#fff" }
@@ -1481,6 +1496,44 @@ export default function App() {
                 <button onClick={saveFamilyHistory} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
                   {familySaved ? <Check size={14} /> : <Plus size={14} />} {familySaved ? "Saved" : "Save"}
                 </button>
+              </>
+            )}
+
+            {profileSubTab === "sensors" && (
+              <>
+                <div className="rounded-2xl p-4 mb-4 flex items-center gap-3.5" style={{ background: COLORS.surfaceAlt }}>
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
+                    <Apple size={20} color={COLORS.ink} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-semibold block" style={{ color: COLORS.ink }}>Apple Health</span>
+                    {profile.apple_health_connected ? (
+                      <span className="text-xs flex items-center gap-1 mt-0.5" style={{ color: COLORS.normal }}>
+                        <CheckCircle2 size={12} /> Connected {profile.apple_health_connected_at ? `· ${daysAgoLabel(profile.apple_health_connected_at)}` : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs block mt-0.5" style={{ color: COLORS.inkSoft }}>Not connected</span>
+                    )}
+                  </div>
+                  {profile.apple_health_connected ? (
+                    <button onClick={disconnectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                      Disconnect
+                    </button>
+                  ) : (
+                    <button onClick={connectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                      Connect
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-xs leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                  Apple Health data lives on your iPhone and Apple only allows native iOS apps to read it directly —
+                  a website like this one can't connect to HealthKit on its own. "Connect" here marks your account as
+                  linked; to actually pull in steps, heart rate, sleep, and weight from Apple Health, Cuff needs a
+                  companion iOS app (or a sync service like Terra, Vital, or Spike) to bridge HealthKit data into your
+                  readings. Until that's built, connecting here won't sync data automatically — you can still log
+                  everything yourself from the Activity and Lab tabs.
+                </p>
               </>
             )}
           </Card>
