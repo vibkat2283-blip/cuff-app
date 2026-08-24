@@ -1,20 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   Heart,
-  Share2,
   LogOut,
-  Plus,
-  Lock,
   Mail,
+  Lock,
   Activity,
   Droplet,
-  FileText,
-  Check,
   User,
   Scale,
   Footprints,
-  Dumbbell,
-  Moon,
   HeartPulse,
   ArrowLeft,
   Home,
@@ -52,6 +46,38 @@ const SUGAR_TYPES = [
   { id: "fasting", label: "Fasting", unit: "mg/dL", min: 70, max: 220, breaks: [100, 126] },
   { id: "nonfasting", label: "Non-fasting", unit: "mg/dL", min: 70, max: 260, breaks: [140, 200] },
   { id: "a1c", label: "A1C", unit: "%", min: 4, max: 9, breaks: [5.7, 6.5] },
+];
+
+const MEDICAL_FIELDS = [
+  { key: "current_diagnoses", label: "Current diagnoses" },
+  { key: "previous_diagnoses", label: "Previous diagnoses" },
+  { key: "previous_surgeries", label: "Previous surgeries" },
+  { key: "hospitalisations", label: "Hospitalisations" },
+  { key: "major_illnesses", label: "Major illnesses" },
+  { key: "previous_thrombotic_events", label: "Previous thrombotic events" },
+  { key: "cardiovascular_history", label: "Cardiovascular history" },
+  { key: "diabetes", label: "Diabetes" },
+  { key: "hypertension", label: "Hypertension" },
+  { key: "thyroid_disease", label: "Thyroid disease" },
+  { key: "kidney_disease", label: "Kidney disease" },
+  { key: "liver_disease", label: "Liver disease" },
+  { key: "cancer_history", label: "Cancer history" },
+  { key: "autoimmune_disease", label: "Autoimmune disease" },
+  { key: "mental_health_history", label: "Mental-health history" },
+];
+
+const FAMILY_FIELDS = [
+  { key: "family_diabetes", label: "Diabetes" },
+  { key: "family_hypertension", label: "Hypertension" },
+  { key: "family_cad_mi_heart_attack", label: "CAD/MI/Heart attack" },
+  { key: "family_stroke", label: "Stroke" },
+  { key: "family_cancer", label: "Cancer" },
+  { key: "family_thyroid_disease", label: "Thyroid disease" },
+  { key: "family_kidney_disease", label: "Kidney disease" },
+  { key: "family_liver_disease", label: "Liver disease" },
+  { key: "family_dementia_memory_loss", label: "Dementia/ Memory loss" },
+  { key: "family_obesity", label: "Obesity" },
+  { key: "family_longevity_age_at_death", label: "Longevity / Age at death" },
 ];
 
 function categorizeBP(sys, dia) {
@@ -98,60 +124,6 @@ function formatDate(iso) {
 
 function shortDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const MEDICAL_FIELDS = [
-  { key: "current_diagnoses", label: "Current diagnoses" },
-  { key: "previous_diagnoses", label: "Previous diagnoses" },
-  { key: "previous_surgeries", label: "Previous surgeries" },
-  { key: "hospitalisations", label: "Hospitalisations" },
-  { key: "major_illnesses", label: "Major illnesses" },
-  { key: "medical_family_history", label: "Family history" },
-  { key: "previous_thrombotic_events", label: "Previous thrombotic events" },
-  { key: "cardiovascular_history", label: "Cardiovascular history" },
-  { key: "diabetes", label: "Diabetes" },
-  { key: "hypertension", label: "Hypertension" },
-  { key: "thyroid_disease", label: "Thyroid disease" },
-  { key: "kidney_disease", label: "Kidney disease" },
-  { key: "liver_disease", label: "Liver disease" },
-  { key: "cancer_history", label: "Cancer history" },
-  { key: "autoimmune_disease", label: "Autoimmune disease" },
-  { key: "mental_health_history", label: "Mental-health history" },
-];
-
-function formatDOBForInput(isoDate) {
-  if (!isoDate) return "";
-  const d = new Date(isoDate + "T00:00:00");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${day}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
-}
-
-function parseDOBInput(str) {
-  if (!str) return null;
-  const m = str.trim().match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
-  if (!m) return null;
-  const day = parseInt(m[1], 10);
-  const monthIndex = MONTHS.findIndex((mo) => mo.toLowerCase() === m[2].toLowerCase());
-  const year = parseInt(m[3], 10);
-  if (monthIndex === -1 || day < 1 || day > 31) return null;
-  return `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function calcAge(isoDate) {
-  if (!isoDate) return null;
-  const dob = new Date(isoDate + "T00:00:00");
-  const now = new Date();
-  let years = now.getFullYear() - dob.getFullYear();
-  let months = now.getMonth() - dob.getMonth();
-  if (now.getDate() < dob.getDate()) months--;
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-  if (years < 0) return null;
-  return { years, months };
 }
 
 function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160, showAxis = true, maxBarSize = 28 }) {
@@ -243,25 +215,29 @@ function SugarSummaryCard({ reading }) {
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [page, setPage] = useState("dashboard"); // 'dashboard' | 'weightHistory'
-  const [activeTab, setActiveTab] = useState("home"); // 'home' | 'activity' | 'lab' | 'doctor' | 'profile'
+  const [page, setPage] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("home");
   const [profileSubTab, setProfileSubTab] = useState("personal"); // 'personal' | 'medical' | 'family'
+  
   const [personalDraft, setPersonalDraft] = useState({
     first_name: "", last_name: "", occupation: "", contact_email: "",
     phone_country_code: "", phone_number: "", date_of_birth: "", sex: "",
     height_ft: "", height_in: "", current_weight_kg: "", city: "", country: "",
-    emergency_country_code: "", emergency_number: "", blood_group: "", allergies: "", food_allergies: "",
   });
   const [personalSaved, setPersonalSaved] = useState(false);
+  
   const [medicalFields, setMedicalFields] = useState(
     Object.fromEntries(MEDICAL_FIELDS.map((f) => [f.key, ""]))
   );
-  const [medicalDraft, setMedicalDraft] = useState("");
-  const [familyDraft, setFamilyDraft] = useState("");
+  const [familyFields, setFamilyFields] = useState(
+    Object.fromEntries(FAMILY_FIELDS.map((f) => [f.key, ""]))
+  );
+  
   const [medicalSaved, setMedicalSaved] = useState(false);
   const [familySaved, setFamilySaved] = useState(false);
   const [profile, setProfile] = useState(null);
-  const [authMode, setAuthMode] = useState("signin"); // 'signin' | 'signup'
+  
+  const [authMode, setAuthMode] = useState("signin");
   const [name, setName] = useState("");
   const [role, setRole] = useState("Patient");
   const [email, setEmail] = useState("");
@@ -278,14 +254,8 @@ export default function App() {
   const [weightValue, setWeightValue] = useState("");
   const [stepsReadings, setStepsReadings] = useState([]);
   const [stepsValue, setStepsValue] = useState("");
-  const [workoutReadings, setWorkoutReadings] = useState([]);
-  const [workoutWeightValue, setWorkoutWeightValue] = useState("");
-  const [workoutCardioValue, setWorkoutCardioValue] = useState("");
   const [sleepReadings, setSleepReadings] = useState([]);
   const [sleepValue, setSleepValue] = useState("");
-  const [heartRateReadings, setHeartRateReadings] = useState([]);
-  const [hrMinValue, setHrMinValue] = useState("");
-  const [hrMaxValue, setHrMaxValue] = useState("");
   const [prescriptions, setPrescriptions] = useState([]);
   const [prescriptionDraft, setPrescriptionDraft] = useState("");
   const [prescriptionSaved, setPrescriptionSaved] = useState(false);
@@ -297,14 +267,12 @@ export default function App() {
   const [nonFastingValue, setNonFastingValue] = useState("");
   const [a1cValue, setA1cValue] = useState("");
 
-  // Track auth session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Load profile once signed in
   useEffect(() => {
     if (!session) {
       setProfile(null);
@@ -313,9 +281,8 @@ export default function App() {
     supabase.from("profiles").select("*").eq("id", session.user.id).single().then(({ data }) => {
       setProfile(data);
       if (data) {
-        setMedicalDraft(data.medical_background || "");
         setMedicalFields(Object.fromEntries(MEDICAL_FIELDS.map((f) => [f.key, data[f.key] || ""])));
-        setFamilyDraft(data.family_history || "");
+        setFamilyFields(Object.fromEntries(FAMILY_FIELDS.map((f) => [f.key, data[f.key] || ""])));
         setPersonalDraft({
           first_name: data.first_name || "",
           last_name: data.last_name || "",
@@ -323,24 +290,18 @@ export default function App() {
           contact_email: data.contact_email || "",
           phone_country_code: data.phone_country_code || "",
           phone_number: data.phone_number || "",
-          date_of_birth: formatDOBForInput(data.date_of_birth),
+          date_of_birth: data.date_of_birth || "",
           sex: data.sex || "",
           height_ft: data.height_ft ?? "",
           height_in: data.height_in ?? "",
           current_weight_kg: data.current_weight_kg ?? "",
           city: data.city || "",
           country: data.country || "",
-          emergency_country_code: data.emergency_country_code || "",
-          emergency_number: data.emergency_number || "",
-          blood_group: data.blood_group || "",
-          allergies: data.allergies || "",
-          food_allergies: data.food_allergies || "",
         });
       }
     });
   }, [session]);
 
-  // Doctors: load the patient list
   useEffect(() => {
     if (profile?.role === "Doctor") {
       supabase.from("profiles").select("*").eq("role", "Patient").then(({ data }) => {
@@ -352,7 +313,6 @@ export default function App() {
 
   const activePatientId = profile?.role === "Doctor" ? selectedPatientId : profile?.id;
 
-  // Load readings + prescription whenever the active patient changes
   useEffect(() => {
     if (!activePatientId) return;
     supabase.from("bp_readings").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
@@ -363,12 +323,8 @@ export default function App() {
       .then(({ data }) => setWeightReadings(data || []));
     supabase.from("steps_readings").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
       .then(({ data }) => setStepsReadings(data || []));
-    supabase.from("workout_readings").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
-      .then(({ data }) => setWorkoutReadings(data || []));
     supabase.from("sleep_readings").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
       .then(({ data }) => setSleepReadings(data || []));
-    supabase.from("heart_rate_readings").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
-      .then(({ data }) => setHeartRateReadings(data || []));
     supabase.from("prescriptions").select("*").eq("patient_id", activePatientId).order("updated_at", { ascending: false })
       .then(({ data }) => {
         setPrescriptions(data || []);
@@ -439,17 +395,6 @@ export default function App() {
     setStepsValue("");
   };
 
-  const addWorkoutReadings = async () => {
-    const rows = [];
-    if (workoutWeightValue) rows.push({ patient_id: profile.id, type: "weight", minutes: parseInt(workoutWeightValue) });
-    if (workoutCardioValue) rows.push({ patient_id: profile.id, type: "cardio", minutes: parseInt(workoutCardioValue) });
-    if (rows.length === 0) return;
-    const { data } = await supabase.from("workout_readings").insert(rows).select();
-    if (data) setWorkoutReadings([...workoutReadings, ...data]);
-    setWorkoutWeightValue("");
-    setWorkoutCardioValue("");
-  };
-
   const addSleepReading = async () => {
     if (!sleepValue) return;
     const { data } = await supabase.from("sleep_readings").insert({
@@ -459,43 +404,28 @@ export default function App() {
     setSleepValue("");
   };
 
-  const addHeartRateReading = async () => {
-    if (!hrMinValue || !hrMaxValue) return;
-    const { data } = await supabase.from("heart_rate_readings").insert({
-      patient_id: profile.id, min_bpm: parseInt(hrMinValue), max_bpm: parseInt(hrMaxValue),
-    }).select();
-    if (data) setHeartRateReadings([...heartRateReadings, ...data]);
-    setHrMinValue("");
-    setHrMaxValue("");
-  };
-
   const savePersonal = async () => {
-    const parsedDOB = parseDOBInput(personalDraft.date_of_birth);
     const payload = {
       ...personalDraft,
-      date_of_birth: parsedDOB,
       height_ft: personalDraft.height_ft === "" ? null : parseInt(personalDraft.height_ft),
       height_in: personalDraft.height_in === "" ? null : parseInt(personalDraft.height_in),
       current_weight_kg: personalDraft.current_weight_kg === "" ? null : parseFloat(personalDraft.current_weight_kg),
     };
     const { data } = await supabase.from("profiles").update(payload).eq("id", profile.id).select().single();
-    if (data) {
-      setProfile(data);
-      setPersonalDraft((prev) => ({ ...prev, date_of_birth: formatDOBForInput(data.date_of_birth) }));
-    }
+    if (data) setProfile(data);
     setPersonalSaved(true);
     setTimeout(() => setPersonalSaved(false), 1800);
   };
 
   const saveMedicalBackground = async () => {
-    const { data } = await supabase.from("profiles").update({ ...medicalFields, medical_background: medicalDraft }).eq("id", profile.id).select().single();
+    const { data } = await supabase.from("profiles").update({ ...medicalFields }).eq("id", profile.id).select().single();
     if (data) setProfile(data);
     setMedicalSaved(true);
     setTimeout(() => setMedicalSaved(false), 1800);
   };
 
   const saveFamilyHistory = async () => {
-    const { data } = await supabase.from("profiles").update({ family_history: familyDraft }).eq("id", profile.id).select().single();
+    const { data } = await supabase.from("profiles").update({ ...familyFields }).eq("id", profile.id).select().single();
     if (data) setProfile(data);
     setFamilySaved(true);
     setTimeout(() => setFamilySaved(false), 1800);
@@ -512,22 +442,13 @@ export default function App() {
   };
 
   const currentPrescription = prescriptions[0];
-  const pastPrescriptions = prescriptions.slice(1);
-
   const latestBp = bpReadings[bpReadings.length - 1];
   const latestBpZone = latestBp ? categorizeBP(latestBp.systolic, latestBp.diastolic) : null;
   const latestWeight = weightReadings[weightReadings.length - 1];
   const prevWeight = weightReadings[weightReadings.length - 2];
-  const latestSteps = stepsReadings[stepsReadings.length - 1];
-  const latestWorkoutWeight = [...workoutReadings].reverse().find((r) => r.type === "weight");
-  const latestWorkoutCardio = [...workoutReadings].reverse().find((r) => r.type === "cardio");
-  const latestSleep = sleepReadings[sleepReadings.length - 1];
-  const latestHeartRate = heartRateReadings[heartRateReadings.length - 1];
   const latestFasting = [...sugarReadings].reverse().find((r) => r.type === "fasting");
   const latestNonFasting = [...sugarReadings].reverse().find((r) => r.type === "nonfasting");
-  const latestA1c = [...sugarReadings].reverse().find((r) => r.type === "a1c");
 
-  // ---------- AUTH SCREEN ----------
   if (!session || !profile) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center p-6" style={{ background: COLORS.bg }}>
@@ -584,7 +505,6 @@ export default function App() {
     );
   }
 
-  // ---------- WEIGHT HISTORY PAGE ----------
   if (page === "weightHistory") {
     return (
       <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
@@ -618,7 +538,6 @@ export default function App() {
     );
   }
 
-  // ---------- DASHBOARD ----------
   const NAV_ITEMS = [
     { id: "home", label: "Home", Icon: Home },
     { id: "activity", label: "Activity", Icon: Activity },
@@ -712,36 +631,34 @@ export default function App() {
 
         {/* ACTIVITY TAB */}
         {activeTab === "activity" && (
-          <>
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <Footprints size={16} color={COLORS.primary} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Log Daily Activity</span>
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <Footprints size={16} color={COLORS.primary} />
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Log Daily Activity</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>STEPS</label>
+                <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>
-                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>STEPS</label>
-                  <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>SLEEP (HOURS)</label>
-                  <input type="number" step="0.5" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                </div>
+              <div>
+                <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>SLEEP (HOURS)</label>
+                <input type="number" step="0.5" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
               </div>
-              <div className="flex gap-2 mb-4">
-                <button onClick={addStepsReading} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Log Steps</button>
-                <button onClick={addSleepReading} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Log Sleep</button>
-              </div>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <button onClick={addStepsReading} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Log Steps</button>
+              <button onClick={addSleepReading} className="flex-1 py-2 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Log Sleep</button>
+            </div>
 
-              <hr className="my-4" style={{ borderColor: COLORS.border }} />
+            <hr className="my-4" style={{ borderColor: COLORS.border }} />
 
-              <span className="text-xs font-semibold block mb-2" style={{ color: COLORS.inkSoft }}>LOG WEIGHT (KG)</span>
-              <div className="flex gap-2">
-                <input type="number" step="0.1" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} placeholder="70.5" className="flex-1 p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                <button onClick={addWeightReading} className="px-4 py-2.5 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Save Weight</button>
-              </div>
-            </Card>
-          </>
+            <span className="text-xs font-semibold block mb-2" style={{ color: COLORS.inkSoft }}>LOG WEIGHT (KG)</span>
+            <div className="flex gap-2">
+              <input type="number" step="0.1" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} placeholder="70.5" className="flex-1 p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+              <button onClick={addWeightReading} className="px-4 py-2.5 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>Save Weight</button>
+            </div>
+          </Card>
         )}
 
         {/* LAB TAB */}
@@ -813,21 +730,93 @@ export default function App() {
           <Card>
             <div className="flex items-center gap-2 mb-4">
               <User size={16} color={COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>User Profile</span>
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile & Health Records</span>
             </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>FIRST NAME</label>
-                <input type="text" value={personalDraft.first_name} onChange={(e) => setPersonalDraft({ ...personalDraft, first_name: e.target.value })} className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>LAST NAME</label>
-                <input type="text" value={personalDraft.last_name} onChange={(e) => setPersonalDraft({ ...personalDraft, last_name: e.target.value })} className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-              </div>
-              <button onClick={savePersonal} className="py-2.5 px-5 rounded-xl text-xs font-semibold" style={{ background: COLORS.primary, color: "#fff" }}>
-                {personalSaved ? "Saved!" : "Save Profile"}
+
+            {/* Sub Tabs */}
+            <div className="flex rounded-xl overflow-hidden mb-5" style={{ border: `1px solid ${COLORS.border}` }}>
+              <button
+                onClick={() => setProfileSubTab("personal")}
+                className="flex-1 py-2 text-xs font-semibold transition-colors"
+                style={profileSubTab === "personal" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}
+              >
+                Personal
+              </button>
+              <button
+                onClick={() => setProfileSubTab("medical")}
+                className="flex-1 py-2 text-xs font-semibold transition-colors"
+                style={profileSubTab === "medical" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}
+              >
+                Medical
+              </button>
+              <button
+                onClick={() => setProfileSubTab("family")}
+                className="flex-1 py-2 text-xs font-semibold transition-colors"
+                style={profileSubTab === "family" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}
+              >
+                Family
               </button>
             </div>
+
+            {/* Personal Details */}
+            {profileSubTab === "personal" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>FIRST NAME</label>
+                  <input type="text" value={personalDraft.first_name} onChange={(e) => setPersonalDraft({ ...personalDraft, first_name: e.target.value })} className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>LAST NAME</label>
+                  <input type="text" value={personalDraft.last_name} onChange={(e) => setPersonalDraft({ ...personalDraft, last_name: e.target.value })} className="w-full p-2.5 rounded-xl text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+                <button onClick={savePersonal} className="py-2.5 px-5 rounded-xl text-xs font-semibold mt-2" style={{ background: COLORS.primary, color: "#fff" }}>
+                  {personalSaved ? "Saved!" : "Save Personal Info"}
+                </button>
+              </div>
+            )}
+
+            {/* Medical History */}
+            {profileSubTab === "medical" && (
+              <div className="space-y-3">
+                {MEDICAL_FIELDS.map(({ key, label }) => (
+                  <div key={key}>
+                    <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>{label.toUpperCase()}</label>
+                    <input
+                      type="text"
+                      value={medicalFields[key] || ""}
+                      onChange={(e) => setMedicalFields({ ...medicalFields, [key]: e.target.value })}
+                      className="w-full p-2.5 rounded-xl text-sm outline-none"
+                      style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                    />
+                  </div>
+                ))}
+                <button onClick={saveMedicalBackground} className="py-2.5 px-5 rounded-xl text-xs font-semibold mt-2" style={{ background: COLORS.primary, color: "#fff" }}>
+                  {medicalSaved ? "Saved!" : "Save Medical Background"}
+                </button>
+              </div>
+            )}
+
+            {/* Family History */}
+            {profileSubTab === "family" && (
+              <div className="space-y-3">
+                {FAMILY_FIELDS.map(({ key, label }) => (
+                  <div key={key}>
+                    <label className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>{label.toUpperCase()}</label>
+                    <input
+                      type="text"
+                      value={familyFields[key] || ""}
+                      onChange={(e) => setFamilyFields({ ...familyFields, [key]: e.target.value })}
+                      placeholder={`Notes for ${label.toLowerCase()}...`}
+                      className="w-full p-2.5 rounded-xl text-sm outline-none"
+                      style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                    />
+                  </div>
+                ))}
+                <button onClick={saveFamilyHistory} className="py-2.5 px-5 rounded-xl text-xs font-semibold mt-2" style={{ background: COLORS.primary, color: "#fff" }}>
+                  {familySaved ? "Saved!" : "Save Family History"}
+                </button>
+              </div>
+            )}
           </Card>
         )}
       </div>
