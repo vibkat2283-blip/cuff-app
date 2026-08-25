@@ -8,6 +8,8 @@ const COLORS = {
   inkSoft: "#4B5C55",
   primary: "#1B4B43",
   primarySoft: "#2F6B5E",
+  activityPrimary: "#FF4500",
+  activityPrimarySoft: "#FF7A45",
   bg: "#F1F5F2",
   surface: "#FFFFFF",
   surfaceAlt: "#E9F1ED",
@@ -98,11 +100,11 @@ const FAMILY_HISTORY_FIELDS = [
 
 const METRIC_DEFS = [
   {
-    id: "steps", label: "Steps", Icon: Footprints, unit: " steps", dataKey: "value", decimals: 0, color: COLORS.primary,
+    id: "steps", label: "Steps", Icon: Footprints, unit: " steps", dataKey: "value", decimals: 0, color: COLORS.activityPrimary,
     recommendedFields: [{ key: "recommended_steps", label: "Recommended steps/day", placeholder: "10000", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "sleep", label: "Sleep", Icon: Moon, unit: " hrs", dataKey: "hours", decimals: 1, color: COLORS.primarySoft,
+    id: "sleep", label: "Sleep", Icon: Moon, unit: " hrs", dataKey: "hours", decimals: 1, color: COLORS.activityPrimarySoft,
     recommendedFields: [{ key: "recommended_sleep_hours", label: "Recommended sleep (hrs)", placeholder: "8", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
@@ -140,6 +142,8 @@ const METRIC_DEFS = [
     ],
   },
 ];
+
+const ACTIVITY_METRIC_IDS = ["steps", "sleep", "workoutWeight", "workoutCardio", "heartRate"];
 
 function formatDOBForInput(isoDate) {
   if (!isoDate) return "";
@@ -237,11 +241,11 @@ function AtAGlanceTile({ Icon, label, value, dotColor, onClick }) {
   );
 }
 
-function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, data, color, recommendedValue, onOpen }) {
+function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, data, color, iconColor = COLORS.primary, recommendedValue, onOpen }) {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-4">
-        <Icon size={16} color={COLORS.primary} />
+        <Icon size={16} color={iconColor} />
         <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -1031,7 +1035,7 @@ export default function App() {
           </button>
           <Card>
             <div className="flex items-center gap-2 mb-4">
-              <metric.Icon size={16} color={COLORS.primary} />
+              <metric.Icon size={16} color={ACTIVITY_METRIC_IDS.includes(metricDetailId) ? COLORS.activityPrimary : COLORS.primary} />
               <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
             </div>
 
@@ -1430,32 +1434,32 @@ export default function App() {
               <>
             <ActivitySection
               Icon={Footprints} label="Steps" dataKey="value" unit=" steps" decimals={0}
-              latest={latestSteps} prev={prevSteps} data={stepsReadings} color={COLORS.primary}
+              latest={latestSteps} prev={prevSteps} data={stepsReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_steps ?? 10000}
               onOpen={() => { setMetricDetailId("steps"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Moon} label="Sleep" dataKey="hours" unit=" hrs" decimals={1}
-              latest={latestSleep} prev={prevSleep} data={sleepReadings} color={COLORS.primarySoft}
+              latest={latestSleep} prev={prevSleep} data={sleepReadings} color={COLORS.activityPrimarySoft} iconColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_sleep_hours ?? 8}
               onOpen={() => { setMetricDetailId("sleep"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Dumbbell} label="Workout minutes" dataKey="minutes" unit=" min" decimals={0}
-              latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.elevated}
+              latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.elevated} iconColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_workout_weight_minutes ?? 20}
               onOpen={() => { setMetricDetailId("workoutWeight"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Footprints} label="Cardio / Walk" dataKey="minutes" unit=" min" decimals={0}
-              latest={latestWorkoutCardio} prev={prevWorkoutCardio} data={workoutCardioEntries} color={COLORS.normal}
+              latest={latestWorkoutCardio} prev={prevWorkoutCardio} data={workoutCardioEntries} color={COLORS.normal} iconColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_workout_cardio_minutes ?? 30}
               onOpen={() => { setMetricDetailId("workoutCardio"); setPage("metricDetail"); }}
             />
 
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <HeartPulse size={16} color={COLORS.primary} />
+                <HeartPulse size={16} color={COLORS.activityPrimary} />
                 <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Daily heart rate</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1496,7 +1500,7 @@ export default function App() {
             {profile.role === "Patient" && (
               <Card>
                 <div className="flex items-center gap-2 mb-4">
-                  <Footprints size={16} color={COLORS.primary} />
+                  <Footprints size={16} color={COLORS.activityPrimary} />
                   <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log activity</span>
                 </div>
 
@@ -2101,14 +2105,15 @@ export default function App() {
       >
         {NAV_ITEMS.map(({ id, label, Icon }) => {
           const active = activeTab === id;
+          const activeColor = id === "activity" ? COLORS.activityPrimary : COLORS.primary;
           return (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
               className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl"
             >
-              <Icon size={20} color={active ? COLORS.primary : COLORS.inkSoft} strokeWidth={active ? 2.4 : 2} />
-              <span className="text-[10px] font-semibold" style={{ color: active ? COLORS.primary : COLORS.inkSoft }}>{label}</span>
+              <Icon size={20} color={active ? activeColor : COLORS.inkSoft} strokeWidth={active ? 2.4 : 2} />
+              <span className="text-[10px] font-semibold" style={{ color: active ? activeColor : COLORS.inkSoft }}>{label}</span>
             </button>
           );
         })}
