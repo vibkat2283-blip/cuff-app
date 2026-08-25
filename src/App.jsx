@@ -9,7 +9,6 @@ const COLORS = {
   primary: "#1B4B43",
   primarySoft: "#2F6B5E",
   activityPrimary: "#FF4500",
-  activityPrimarySoft: "#FF7A45",
   bg: "#F1F5F2",
   surface: "#FFFFFF",
   surfaceAlt: "#E9F1ED",
@@ -104,7 +103,7 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_steps", label: "Recommended steps/day", placeholder: "10000", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "sleep", label: "Sleep", Icon: Moon, unit: " hrs", dataKey: "hours", decimals: 1, color: COLORS.activityPrimarySoft,
+    id: "sleep", label: "Sleep", Icon: Moon, unit: " hrs", dataKey: "hours", decimals: 1, color: COLORS.activityPrimary,
     recommendedFields: [{ key: "recommended_sleep_hours", label: "Recommended sleep (hrs)", placeholder: "8", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
@@ -241,19 +240,19 @@ function AtAGlanceTile({ Icon, label, value, dotColor, onClick }) {
   );
 }
 
-function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, data, color, iconColor = COLORS.primary, recommendedValue, onOpen }) {
+function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, data, color, iconColor = COLORS.primary, textColor = COLORS.ink, recommendedValue, onOpen }) {
   return (
     <Card>
       <div className="flex items-center gap-2 mb-4">
         <Icon size={16} color={iconColor} />
-        <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
+        <span className="text-lg font-semibold" style={{ color: textColor, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col items-center justify-center">
           <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
           {latest ? (
             <>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: textColor }} className="text-4xl font-bold">
                 {latest[dataKey]}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}>{unit}</span>
               </div>
               {prev && (
@@ -1036,7 +1035,7 @@ export default function App() {
           <Card>
             <div className="flex items-center gap-2 mb-4">
               <metric.Icon size={16} color={ACTIVITY_METRIC_IDS.includes(metricDetailId) ? COLORS.activityPrimary : COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
+              <span className="text-lg font-semibold" style={{ color: ACTIVITY_METRIC_IDS.includes(metricDetailId) ? COLORS.activityPrimary : COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
             </div>
 
             {metricDetailId === "heartRate" ? (
@@ -1050,8 +1049,8 @@ export default function App() {
                       contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
                       labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
                     />
-                    <Bar dataKey="min_bpm" name="Min" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                    <Bar dataKey="min_bpm" name="Min" fill={COLORS.activityPrimary} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                    <Bar dataKey="max_bpm" name="Max" fill={COLORS.activityPrimary} radius={[6, 6, 0, 0]} maxBarSize={18} />
                     <ReferenceLine
                       y={activePatientProfile?.recommended_heart_rate_min ?? 60}
                       stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
@@ -1434,25 +1433,25 @@ export default function App() {
               <>
             <ActivitySection
               Icon={Footprints} label="Steps" dataKey="value" unit=" steps" decimals={0}
-              latest={latestSteps} prev={prevSteps} data={stepsReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary}
+              latest={latestSteps} prev={prevSteps} data={stepsReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_steps ?? 10000}
               onOpen={() => { setMetricDetailId("steps"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Moon} label="Sleep" dataKey="hours" unit=" hrs" decimals={1}
-              latest={latestSleep} prev={prevSleep} data={sleepReadings} color={COLORS.activityPrimarySoft} iconColor={COLORS.activityPrimary}
+              latest={latestSleep} prev={prevSleep} data={sleepReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_sleep_hours ?? 8}
               onOpen={() => { setMetricDetailId("sleep"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Dumbbell} label="Workout minutes" dataKey="minutes" unit=" min" decimals={0}
-              latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.elevated} iconColor={COLORS.activityPrimary}
+              latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_workout_weight_minutes ?? 20}
               onOpen={() => { setMetricDetailId("workoutWeight"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Footprints} label="Cardio / Walk" dataKey="minutes" unit=" min" decimals={0}
-              latest={latestWorkoutCardio} prev={prevWorkoutCardio} data={workoutCardioEntries} color={COLORS.normal} iconColor={COLORS.activityPrimary}
+              latest={latestWorkoutCardio} prev={prevWorkoutCardio} data={workoutCardioEntries} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_workout_cardio_minutes ?? 30}
               onOpen={() => { setMetricDetailId("workoutCardio"); setPage("metricDetail"); }}
             />
@@ -1460,14 +1459,14 @@ export default function App() {
             <Card>
               <div className="flex items-center gap-2 mb-4">
                 <HeartPulse size={16} color={COLORS.activityPrimary} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Daily heart rate</span>
+                <span className="text-lg font-semibold" style={{ color: COLORS.activityPrimary, fontFamily: "'Space Grotesk', sans-serif" }}>Daily heart rate</span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col items-center justify-center">
                   <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
                   {latestHeartRate ? (
                     <>
-                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.activityPrimary }} className="text-4xl font-bold">
                         {latestHeartRate.min_bpm}–{latestHeartRate.max_bpm}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> bpm</span>
                       </div>
                       <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestHeartRate.created_at)} · {daysAgoLabel(latestHeartRate.created_at)}</span>
@@ -1482,8 +1481,8 @@ export default function App() {
                     <ResponsiveContainer width="100%" height={110}>
                       <BarChart data={heartRateReadings.slice(-5).map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
                         <YAxis hide />
-                        <Bar dataKey="min_bpm" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
-                        <Bar dataKey="max_bpm" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
+                        <Bar dataKey="min_bpm" fill={COLORS.activityPrimary} radius={[4, 4, 0, 0]} maxBarSize={12} />
+                        <Bar dataKey="max_bpm" fill={COLORS.activityPrimary} radius={[4, 4, 0, 0]} maxBarSize={12} />
                         <ReferenceLine y={activePatientProfile?.recommended_heart_rate_min ?? 60} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
                         <ReferenceLine y={activePatientProfile?.recommended_heart_rate_max ?? 100} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
                       </BarChart>
@@ -1501,7 +1500,7 @@ export default function App() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <Footprints size={16} color={COLORS.activityPrimary} />
-                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log activity</span>
+                  <span className="text-sm font-semibold" style={{ color: COLORS.activityPrimary }}>Log activity</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mb-4">
