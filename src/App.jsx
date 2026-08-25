@@ -851,8 +851,8 @@ export default function App() {
                 unit={` ${weightReadings[0]?.unit || "kg"}`}
                 colorForEntry={() => COLORS.primary}
                 height={260}
-                referenceValue={activePatientProfile?.recommended_weight_kg ?? null}
-                referenceLabel={`Target: ${activePatientProfile?.recommended_weight_kg} kg`}
+                referenceValue={activePatientProfile?.recommended_weight_kg ?? 70}
+                referenceLabel={activePatientProfile?.recommended_weight_kg != null ? `Target: ${activePatientProfile.recommended_weight_kg} kg` : "Suggested: 70 kg"}
               />
             ) : (
               <p className="text-sm" style={{ color: COLORS.inkSoft }}>No weight readings yet.</p>
@@ -892,7 +892,9 @@ export default function App() {
                 </>
               ) : (
                 <span className="text-sm" style={{ color: COLORS.ink }}>
-                  Recommended weight: {activePatientProfile?.recommended_weight_kg != null ? `${activePatientProfile.recommended_weight_kg} kg` : <span style={{ color: COLORS.inkSoft }}>Not set by your doctor yet</span>}
+                  Recommended weight: {activePatientProfile?.recommended_weight_kg != null
+                    ? `${activePatientProfile.recommended_weight_kg} kg`
+                    : <span style={{ color: COLORS.inkSoft }}>70 kg (general suggestion — your doctor hasn't set one)</span>}
                 </span>
               )}
             </div>
@@ -935,12 +937,16 @@ export default function App() {
                     />
                     <Bar dataKey="min_bpm" name="Min" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
                     <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    {typeof activePatientProfile?.recommended_heart_rate_min === "number" && (
-                      <ReferenceLine y={activePatientProfile.recommended_heart_rate_min} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target min: ${activePatientProfile.recommended_heart_rate_min}`, position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }} />
-                    )}
-                    {typeof activePatientProfile?.recommended_heart_rate_max === "number" && (
-                      <ReferenceLine y={activePatientProfile.recommended_heart_rate_max} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target max: ${activePatientProfile.recommended_heart_rate_max}`, position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }} />
-                    )}
+                    <ReferenceLine
+                      y={activePatientProfile?.recommended_heart_rate_min ?? 60}
+                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5}
+                      label={{ value: activePatientProfile?.recommended_heart_rate_min != null ? `Target min: ${activePatientProfile.recommended_heart_rate_min}` : "Suggested min: 60", position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }}
+                    />
+                    <ReferenceLine
+                      y={activePatientProfile?.recommended_heart_rate_max ?? 100}
+                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5}
+                      label={{ value: activePatientProfile?.recommended_heart_rate_max != null ? `Target max: ${activePatientProfile.recommended_heart_rate_max}` : "Suggested max: 100", position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -959,12 +965,16 @@ export default function App() {
                     />
                     <Bar dataKey="systolic" name="Systolic" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
                     <Bar dataKey="diastolic" name="Diastolic" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    {typeof activePatientProfile?.recommended_bp_systolic === "number" && (
-                      <ReferenceLine y={activePatientProfile.recommended_bp_systolic} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target systolic: ${activePatientProfile.recommended_bp_systolic}`, position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }} />
-                    )}
-                    {typeof activePatientProfile?.recommended_bp_diastolic === "number" && (
-                      <ReferenceLine y={activePatientProfile.recommended_bp_diastolic} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target diastolic: ${activePatientProfile.recommended_bp_diastolic}`, position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }} />
-                    )}
+                    <ReferenceLine
+                      y={activePatientProfile?.recommended_bp_systolic ?? 120}
+                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5}
+                      label={{ value: activePatientProfile?.recommended_bp_systolic != null ? `Target systolic: ${activePatientProfile.recommended_bp_systolic}` : "Suggested systolic: 120", position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }}
+                    />
+                    <ReferenceLine
+                      y={activePatientProfile?.recommended_bp_diastolic ?? 80}
+                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5}
+                      label={{ value: activePatientProfile?.recommended_bp_diastolic != null ? `Target diastolic: ${activePatientProfile.recommended_bp_diastolic}` : "Suggested diastolic: 80", position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -977,8 +987,12 @@ export default function App() {
                 unit={metric.unit}
                 colorForEntry={() => metric.color}
                 height={260}
-                referenceValue={activePatientProfile?.[metric.recommendedFields[0].key] ?? null}
-                referenceLabel={`Target: ${activePatientProfile?.[metric.recommendedFields[0].key]}${metric.unit}`}
+                referenceValue={activePatientProfile?.[metric.recommendedFields[0].key] ?? Number(metric.recommendedFields[0].placeholder)}
+                referenceLabel={
+                  activePatientProfile?.[metric.recommendedFields[0].key] != null
+                    ? `Target: ${activePatientProfile[metric.recommendedFields[0].key]}${metric.unit}`
+                    : `Suggested: ${metric.recommendedFields[0].placeholder}${metric.unit}`
+                }
               />
             ) : (
               <p className="text-sm" style={{ color: COLORS.inkSoft }}>No {metric.label.toLowerCase()} readings yet.</p>
@@ -1012,7 +1026,9 @@ export default function App() {
                 <div className="flex flex-col gap-1.5">
                   {metric.recommendedFields.map((f) => (
                     <span key={f.key} className="text-sm" style={{ color: COLORS.ink }}>
-                      {f.label}: {activePatientProfile?.[f.key] != null ? activePatientProfile[f.key] : <span style={{ color: COLORS.inkSoft }}>Not set by your doctor yet</span>}
+                      {f.label}: {activePatientProfile?.[f.key] != null
+                        ? activePatientProfile[f.key]
+                        : <span style={{ color: COLORS.inkSoft }}>{f.placeholder} (general suggestion — your doctor hasn't set one)</span>}
                     </span>
                   ))}
                 </div>
@@ -1183,7 +1199,7 @@ export default function App() {
                       height={110}
                       showAxis={false}
                       maxBarSize={20}
-                      referenceValue={activePatientProfile?.recommended_weight_kg ?? null}
+                      referenceValue={activePatientProfile?.recommended_weight_kg ?? 70}
                     />
                   </div>
                 </div>
@@ -1264,25 +1280,25 @@ export default function App() {
             <ActivitySection
               Icon={Footprints} label="Steps" dataKey="value" unit=" steps" decimals={0}
               latest={latestSteps} prev={prevSteps} data={stepsReadings} color={COLORS.primary}
-              recommendedValue={activePatientProfile?.recommended_steps ?? null}
+              recommendedValue={activePatientProfile?.recommended_steps ?? 10000}
               onOpen={() => { setMetricDetailId("steps"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Moon} label="Sleep" dataKey="hours" unit=" hrs" decimals={1}
               latest={latestSleep} prev={prevSleep} data={sleepReadings} color={COLORS.primarySoft}
-              recommendedValue={activePatientProfile?.recommended_sleep_hours ?? null}
+              recommendedValue={activePatientProfile?.recommended_sleep_hours ?? 8}
               onOpen={() => { setMetricDetailId("sleep"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Dumbbell} label="Workout minutes" dataKey="minutes" unit=" min" decimals={0}
               latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.elevated}
-              recommendedValue={activePatientProfile?.recommended_workout_weight_minutes ?? null}
+              recommendedValue={activePatientProfile?.recommended_workout_weight_minutes ?? 20}
               onOpen={() => { setMetricDetailId("workoutWeight"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Footprints} label="Cardio / Walk" dataKey="minutes" unit=" min" decimals={0}
               latest={latestWorkoutCardio} prev={prevWorkoutCardio} data={workoutCardioEntries} color={COLORS.normal}
-              recommendedValue={activePatientProfile?.recommended_workout_cardio_minutes ?? null}
+              recommendedValue={activePatientProfile?.recommended_workout_cardio_minutes ?? 30}
               onOpen={() => { setMetricDetailId("workoutCardio"); setPage("metricDetail"); }}
             />
 
@@ -1313,12 +1329,8 @@ export default function App() {
                         <YAxis hide />
                         <Bar dataKey="min_bpm" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
                         <Bar dataKey="max_bpm" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
-                        {typeof activePatientProfile?.recommended_heart_rate_min === "number" && (
-                          <ReferenceLine y={activePatientProfile.recommended_heart_rate_min} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
-                        )}
-                        {typeof activePatientProfile?.recommended_heart_rate_max === "number" && (
-                          <ReferenceLine y={activePatientProfile.recommended_heart_rate_max} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
-                        )}
+                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_min ?? 60} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
+                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_max ?? 100} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
@@ -1441,12 +1453,8 @@ export default function App() {
                             <YAxis hide />
                             <Bar dataKey="systolic" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
                             <Bar dataKey="diastolic" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
-                            {typeof activePatientProfile?.recommended_bp_systolic === "number" && (
-                              <ReferenceLine y={activePatientProfile.recommended_bp_systolic} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
-                            )}
-                            {typeof activePatientProfile?.recommended_bp_diastolic === "number" && (
-                              <ReferenceLine y={activePatientProfile.recommended_bp_diastolic} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
-                            )}
+                            <ReferenceLine y={activePatientProfile?.recommended_bp_systolic ?? 120} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
+                            <ReferenceLine y={activePatientProfile?.recommended_bp_diastolic ?? 80} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
@@ -1461,19 +1469,19 @@ export default function App() {
                 <ActivitySection
                   Icon={Droplet} label="Fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
                   latest={latestFasting} prev={prevFasting} data={fastingEntries} color={COLORS.normal}
-                  recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? null}
+                  recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? 90}
                   onOpen={() => { setMetricDetailId("fastingSugar"); setPage("metricDetail"); }}
                 />
                 <ActivitySection
                   Icon={Droplet} label="Non-fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
                   latest={latestNonFasting} prev={prevNonFasting} data={nonFastingEntries} color={COLORS.elevated}
-                  recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? null}
+                  recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? 120}
                   onOpen={() => { setMetricDetailId("nonFastingSugar"); setPage("metricDetail"); }}
                 />
                 <ActivitySection
                   Icon={Droplet} label="A1C" dataKey="value" unit="%" decimals={1}
                   latest={latestA1c} prev={prevA1c} data={a1cEntries} color={COLORS.primarySoft}
-                  recommendedValue={activePatientProfile?.recommended_sugar_a1c ?? null}
+                  recommendedValue={activePatientProfile?.recommended_sugar_a1c ?? 5.6}
                   onOpen={() => { setMetricDetailId("a1c"); setPage("metricDetail"); }}
                 />
 
