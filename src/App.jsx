@@ -41,12 +41,6 @@ function categorizeSugar(typeId, value) {
   return { label: "Normal", color: COLORS.normal };
 }
 
-function pulseZone(bpm) {
-  if (bpm < 60) return { label: "Low", color: COLORS.elevated };
-  if (bpm > 100) return { label: "Elevated", color: COLORS.high };
-  return { label: "Normal", color: COLORS.normal };
-}
-
 function daysAgoLabel(iso) {
   if (!iso) return "";
   const raw = new Date(iso);
@@ -102,7 +96,7 @@ const FAMILY_HISTORY_FIELDS = [
   { key: "family_longevity", label: "Longevity / Age at death" },
 ];
 
-const ACTIVITY_METRICS = [
+const METRIC_DEFS = [
   {
     id: "steps", label: "Steps", Icon: Footprints, unit: " steps", dataKey: "value", decimals: 0, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_steps", label: "Recommended steps/day", placeholder: "10000", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
@@ -124,6 +118,25 @@ const ACTIVITY_METRICS = [
     recommendedFields: [
       { key: "recommended_heart_rate_min", label: "Recommended min (bpm)", placeholder: "60", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
       { key: "recommended_heart_rate_max", label: "Recommended max (bpm)", placeholder: "100", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
+    ],
+  },
+  {
+    id: "fastingSugar", label: "Fasting sugar", Icon: Droplet, unit: " mg/dL", dataKey: "value", decimals: 0, color: COLORS.normal,
+    recommendedFields: [{ key: "recommended_sugar_fasting", label: "Recommended fasting sugar (mg/dL)", placeholder: "90", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
+  },
+  {
+    id: "nonFastingSugar", label: "Non-fasting sugar", Icon: Droplet, unit: " mg/dL", dataKey: "value", decimals: 0, color: COLORS.elevated,
+    recommendedFields: [{ key: "recommended_sugar_nonfasting", label: "Recommended non-fasting sugar (mg/dL)", placeholder: "120", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
+  },
+  {
+    id: "a1c", label: "A1C", Icon: Droplet, unit: "%", dataKey: "value", decimals: 1, color: COLORS.primarySoft,
+    recommendedFields: [{ key: "recommended_sugar_a1c", label: "Recommended A1C (%)", placeholder: "5.6", parse: (v) => (v === "" ? null : parseFloat(v)) }],
+  },
+  {
+    id: "bloodPressure", label: "Blood pressure", Icon: Heart, unit: " mmHg", dataKey: null, decimals: 0, color: null,
+    recommendedFields: [
+      { key: "recommended_bp_systolic", label: "Recommended systolic (mmHg)", placeholder: "120", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
+      { key: "recommended_bp_diastolic", label: "Recommended diastolic (mmHg)", placeholder: "80", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
     ],
   },
 ];
@@ -209,27 +222,6 @@ function Card({ children, className = "" }) {
   );
 }
 
-function MetricCard({ label, value, unit, zoneLabel, zoneColor }) {
-  return (
-    <div className="rounded-2xl p-4 flex-1" style={{ background: COLORS.surfaceAlt }}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold tracking-wide" style={{ color: COLORS.inkSoft }}>
-          {label.toUpperCase()}
-        </span>
-        {zoneLabel && (
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: zoneColor + "1a", color: zoneColor }}>
-            {zoneLabel}
-          </span>
-        )}
-      </div>
-      <div className="flex items-baseline gap-1.5">
-        <span style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-2xl font-bold">{value}</span>
-        <span className="text-xs" style={{ color: COLORS.inkSoft }}>{unit}</span>
-      </div>
-    </div>
-  );
-}
-
 function AtAGlanceTile({ Icon, label, value, dotColor, onClick }) {
   return (
     <button onClick={onClick} className="rounded-2xl p-3 flex flex-col gap-2 text-left w-full" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
@@ -301,30 +293,6 @@ function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, d
   );
 }
 
-function SugarSummaryCard({ reading }) {
-  if (!reading) {
-    return (
-      <div className="rounded-2xl p-4 flex items-center justify-center flex-1" style={{ background: COLORS.surfaceAlt, border: `1px dashed ${COLORS.border}`, minHeight: 88 }}>
-        <span className="text-xs" style={{ color: COLORS.inkSoft }}>No reading yet</span>
-      </div>
-    );
-  }
-  const t = SUGAR_TYPES.find((s) => s.id === reading.type);
-  const z = categorizeSugar(reading.type, reading.value);
-  return (
-    <div className="rounded-2xl p-4 flex-1" style={{ background: COLORS.surfaceAlt }}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold tracking-wide" style={{ color: COLORS.inkSoft }}>{t.label.toUpperCase()}</span>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: z.color + "1a", color: z.color }}>{z.label}</span>
-      </div>
-      <div className="flex items-baseline gap-1.5 mb-2">
-        <span style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-2xl font-bold">{reading.value}</span>
-        <span className="text-xs" style={{ color: COLORS.inkSoft }}>{t.unit}</span>
-      </div>
-      <div className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(reading.created_at)} · {daysAgoLabel(reading.created_at)}</div>
-    </div>
-  );
-}
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -364,6 +332,7 @@ export default function App() {
   const [sugarReadings, setSugarReadings] = useState([]);
   const [weightReadings, setWeightReadings] = useState([]);
   const [weightValue, setWeightValue] = useState("");
+  const [weightTargetDraft, setWeightTargetDraft] = useState("");
   const [stepsReadings, setStepsReadings] = useState([]);
   const [stepsValue, setStepsValue] = useState("");
   const [workoutReadings, setWorkoutReadings] = useState([]);
@@ -381,9 +350,15 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [messageDraft, setMessageDraft] = useState("");
   const [doctorHasUnreadMessages, setDoctorHasUnreadMessages] = useState(false);
-  const [activityDetailId, setActivityDetailId] = useState(null);
+  const [metricDetailId, setMetricDetailId] = useState(null);
   const [recommendedDraft, setRecommendedDraft] = useState({});
   const [recommendedSaved, setRecommendedSaved] = useState(false);
+  const [activitySubTab, setActivitySubTab] = useState("activity"); // 'activity' | 'sensors'
+  const [labSubTab, setLabSubTab] = useState("readings"); // 'readings' | 'upload'
+  const [labReports, setLabReports] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const [sys, setSys] = useState("");
   const [dia, setDia] = useState("");
@@ -451,13 +426,19 @@ export default function App() {
 
   // Sync the recommended-value draft whenever the activity detail page or active patient changes
   useEffect(() => {
-    if (!activityDetailId) return;
-    const metric = ACTIVITY_METRICS.find((m) => m.id === activityDetailId);
+    if (!metricDetailId) return;
+    const metric = METRIC_DEFS.find((m) => m.id === metricDetailId);
     if (!metric) return;
     const draft = {};
     metric.recommendedFields.forEach((f) => { draft[f.key] = activePatientProfile?.[f.key] ?? ""; });
     setRecommendedDraft(draft);
-  }, [activityDetailId, activePatientId]);
+  }, [metricDetailId, activePatientId]);
+
+  // Sync the weight target draft whenever the weight history page or active patient changes
+  useEffect(() => {
+    if (page !== "weightHistory") return;
+    setWeightTargetDraft(activePatientProfile?.recommended_weight_kg ?? "");
+  }, [page, activePatientId]);
 
   // Load readings + prescription whenever the active patient changes
   useEffect(() => {
@@ -483,6 +464,8 @@ export default function App() {
       });
     supabase.from("messages").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
       .then(({ data }) => setMessages(data || []));
+    supabase.from("lab_reports").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: false })
+      .then(({ data }) => setLabReports(data || []));
   }, [activePatientId]);
 
   // Doctors: check for any unread patient message across all patients, not just the one currently selected
@@ -554,6 +537,15 @@ export default function App() {
     setWeightValue("");
   };
 
+  const saveWeightTarget = async () => {
+    if (!activePatientId) return;
+    const parsed = weightTargetDraft === "" ? null : parseFloat(weightTargetDraft);
+    const { data } = await supabase.from("profiles").update({ recommended_weight_kg: parsed }).eq("id", activePatientId).select().single();
+    if (data) setPatients((prev) => prev.map((p) => (p.id === data.id ? data : p)));
+    setRecommendedSaved(true);
+    setTimeout(() => setRecommendedSaved(false), 1800);
+  };
+
   const addStepsReading = async () => {
     if (!stepsValue) return;
     const { data } = await supabase.from("steps_readings").insert({
@@ -594,7 +586,7 @@ export default function App() {
   };
 
   const saveRecommended = async () => {
-    const metric = ACTIVITY_METRICS.find((m) => m.id === activityDetailId);
+    const metric = METRIC_DEFS.find((m) => m.id === metricDetailId);
     if (!metric || !activePatientId) return;
     const payload = {};
     metric.recommendedFields.forEach((f) => { payload[f.key] = f.parse(recommendedDraft[f.key] ?? ""); });
@@ -602,6 +594,28 @@ export default function App() {
     if (data) setPatients((prev) => prev.map((p) => (p.id === data.id ? data : p)));
     setRecommendedSaved(true);
     setTimeout(() => setRecommendedSaved(false), 1800);
+  };
+
+  const uploadLabReport = async () => {
+    if (!selectedFile || !activePatientId) return;
+    setUploadingFile(true);
+    const path = `${activePatientId}/${Date.now()}_${selectedFile.name}`;
+    const { error: uploadError } = await supabase.storage.from("lab-reports").upload(path, selectedFile);
+    if (!uploadError) {
+      const { data } = await supabase.from("lab_reports").insert({
+        patient_id: activePatientId, uploaded_by: profile.id, file_name: selectedFile.name,
+        file_path: path, content_type: selectedFile.type,
+      }).select();
+      if (data) setLabReports([data[0], ...labReports]);
+    }
+    setSelectedFile(null);
+    setFileInputKey((k) => k + 1);
+    setUploadingFile(false);
+  };
+
+  const viewLabReport = async (report) => {
+    const { data } = await supabase.storage.from("lab-reports").createSignedUrl(report.file_path, 3600);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
   const savePersonal = async () => {
@@ -714,9 +728,16 @@ export default function App() {
   const latestSleep = sleepReadings[sleepReadings.length - 1];
   const prevSleep = sleepReadings[sleepReadings.length - 2];
   const latestHeartRate = heartRateReadings[heartRateReadings.length - 1];
-  const latestFasting = [...sugarReadings].reverse().find((r) => r.type === "fasting");
-  const latestNonFasting = [...sugarReadings].reverse().find((r) => r.type === "nonfasting");
-  const latestA1c = [...sugarReadings].reverse().find((r) => r.type === "a1c");
+  const fastingEntries = sugarReadings.filter((r) => r.type === "fasting");
+  const nonFastingEntries = sugarReadings.filter((r) => r.type === "nonfasting");
+  const a1cEntries = sugarReadings.filter((r) => r.type === "a1c");
+  const latestFasting = fastingEntries[fastingEntries.length - 1];
+  const prevFasting = fastingEntries[fastingEntries.length - 2];
+  const latestNonFasting = nonFastingEntries[nonFastingEntries.length - 1];
+  const prevNonFasting = nonFastingEntries[nonFastingEntries.length - 2];
+  const latestA1c = a1cEntries[a1cEntries.length - 1];
+  const prevA1c = a1cEntries[a1cEntries.length - 2];
+  const prevBp = bpReadings[bpReadings.length - 2];
   const latestSugarReading = [latestFasting, latestNonFasting, latestA1c]
     .filter(Boolean)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
@@ -726,11 +747,14 @@ export default function App() {
     ? (latestHeartRate.min_bpm < 60 || latestHeartRate.max_bpm > 100 ? COLORS.elevated : COLORS.normal)
     : COLORS.muted;
 
-  const ACTIVITY_METRIC_RUNTIME = {
+  const METRIC_RUNTIME = {
     steps: { data: stepsReadings, latest: latestSteps, prev: prevSteps },
     sleep: { data: sleepReadings, latest: latestSleep, prev: prevSleep },
     workoutWeight: { data: workoutWeightEntries, latest: latestWorkoutWeight, prev: prevWorkoutWeight },
     workoutCardio: { data: workoutCardioEntries, latest: latestWorkoutCardio, prev: prevWorkoutCardio },
+    fastingSugar: { data: fastingEntries, latest: latestFasting, prev: prevFasting },
+    nonFastingSugar: { data: nonFastingEntries, latest: latestNonFasting, prev: prevNonFasting },
+    a1c: { data: a1cEntries, latest: latestA1c, prev: prevA1c },
   };
 
   const outOfRangeAlerts = [];
@@ -827,6 +851,8 @@ export default function App() {
                 unit={` ${weightReadings[0]?.unit || "kg"}`}
                 colorForEntry={() => COLORS.primary}
                 height={260}
+                referenceValue={activePatientProfile?.recommended_weight_kg ?? null}
+                referenceLabel={`Target: ${activePatientProfile?.recommended_weight_kg} kg`}
               />
             ) : (
               <p className="text-sm" style={{ color: COLORS.inkSoft }}>No weight readings yet.</p>
@@ -843,6 +869,33 @@ export default function App() {
                 </div>
               </div>
             )}
+
+            <div className="mt-5 pt-5" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+              <span className="text-xs font-semibold tracking-wide block mb-3" style={{ color: COLORS.inkSoft }}>RECOMMENDED TARGET</span>
+              {profile.role === "Doctor" ? (
+                <>
+                  <div className="mb-3">
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Recommended weight (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={weightTargetDraft}
+                      onChange={(e) => setWeightTargetDraft(e.target.value)}
+                      placeholder="70"
+                      className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center"
+                      style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                    />
+                  </div>
+                  <button onClick={saveWeightTarget} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                    {recommendedSaved ? <Check size={14} /> : <Plus size={14} />} {recommendedSaved ? "Saved" : "Save target"}
+                  </button>
+                </>
+              ) : (
+                <span className="text-sm" style={{ color: COLORS.ink }}>
+                  Recommended weight: {activePatientProfile?.recommended_weight_kg != null ? `${activePatientProfile.recommended_weight_kg} kg` : <span style={{ color: COLORS.inkSoft }}>Not set by your doctor yet</span>}
+                </span>
+              )}
+            </div>
           </Card>
         </div>
       </div>
@@ -850,9 +903,9 @@ export default function App() {
   }
 
   // ---------- ACTIVITY METRIC DETAIL PAGE ----------
-  if (page === "activityDetail" && activityDetailId) {
-    const metric = ACTIVITY_METRICS.find((m) => m.id === activityDetailId);
-    const runtime = ACTIVITY_METRIC_RUNTIME[activityDetailId];
+  if (page === "metricDetail" && metricDetailId) {
+    const metric = METRIC_DEFS.find((m) => m.id === metricDetailId);
+    const runtime = METRIC_RUNTIME[metricDetailId];
     return (
       <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
         <div className="max-w-2xl mx-auto p-5">
@@ -869,7 +922,7 @@ export default function App() {
               <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
             </div>
 
-            {activityDetailId === "heartRate" ? (
+            {metricDetailId === "heartRate" ? (
               heartRateReadings.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={heartRateReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
@@ -892,6 +945,30 @@ export default function App() {
                 </ResponsiveContainer>
               ) : (
                 <p className="text-sm" style={{ color: COLORS.inkSoft }}>No heart rate readings yet.</p>
+              )
+            ) : metricDetailId === "bloodPressure" ? (
+              bpReadings.length > 0 ? (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={bpReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+                    <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
+                    <YAxis hide />
+                    <Tooltip
+                      cursor={{ fill: COLORS.surfaceAlt }}
+                      contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
+                      labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
+                    />
+                    <Bar dataKey="systolic" name="Systolic" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                    <Bar dataKey="diastolic" name="Diastolic" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
+                    {typeof activePatientProfile?.recommended_bp_systolic === "number" && (
+                      <ReferenceLine y={activePatientProfile.recommended_bp_systolic} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target systolic: ${activePatientProfile.recommended_bp_systolic}`, position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }} />
+                    )}
+                    {typeof activePatientProfile?.recommended_bp_diastolic === "number" && (
+                      <ReferenceLine y={activePatientProfile.recommended_bp_diastolic} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} label={{ value: `Target diastolic: ${activePatientProfile.recommended_bp_diastolic}`, position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }} />
+                    )}
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No blood pressure readings yet.</p>
               )
             ) : runtime.data.length > 0 ? (
               <HistoryBarChart
@@ -992,6 +1069,10 @@ export default function App() {
             )}
 
             <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <Activity size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>At-a-glance</span>
+              </div>
               <div className="grid grid-cols-4 gap-2">
                 <AtAGlanceTile
                   Icon={Heart}
@@ -1043,7 +1124,10 @@ export default function App() {
 
             {profile.role === "Patient" && (
               <Card>
-                <span className="text-xs font-semibold tracking-wide block mb-3" style={{ color: COLORS.inkSoft }}>QUICK LOG</span>
+                <div className="flex items-center gap-2 mb-4">
+                  <Plus size={16} color={COLORS.primary} />
+                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Quick log</span>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <button onClick={() => setActiveTab("lab")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
                     <Heart size={16} color={COLORS.primary} />
@@ -1099,6 +1183,7 @@ export default function App() {
                       height={110}
                       showAxis={false}
                       maxBarSize={20}
+                      referenceValue={activePatientProfile?.recommended_weight_kg ?? null}
                     />
                   </div>
                 </div>
@@ -1113,29 +1198,92 @@ export default function App() {
 
         {activeTab === "activity" && (
           <>
+            <div
+              className="flex gap-2 mb-5 sticky top-0 z-10 py-2"
+              style={{ background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              {[
+                { id: "activity", label: "Activity" },
+                { id: "sensors", label: "Connect Sensor" },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setActivitySubTab(t.id)}
+                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                  style={
+                    activitySubTab === t.id
+                      ? { background: COLORS.ink, color: "#fff" }
+                      : { background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
+                  }
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {activitySubTab === "sensors" && (
+              <Card>
+                <div className="rounded-2xl p-4 mb-4 flex items-center gap-3.5" style={{ background: COLORS.surfaceAlt }}>
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
+                    <Apple size={20} color={COLORS.ink} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-semibold block" style={{ color: COLORS.ink }}>Apple Health</span>
+                    {profile.apple_health_connected ? (
+                      <span className="text-xs flex items-center gap-1 mt-0.5" style={{ color: COLORS.normal }}>
+                        <CheckCircle2 size={12} /> Connected {profile.apple_health_connected_at ? `· ${daysAgoLabel(profile.apple_health_connected_at)}` : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs block mt-0.5" style={{ color: COLORS.inkSoft }}>Not connected</span>
+                    )}
+                  </div>
+                  {profile.apple_health_connected ? (
+                    <button onClick={disconnectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                      Disconnect
+                    </button>
+                  ) : (
+                    <button onClick={connectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                      Connect
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-xs leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                  Apple Health data lives on your iPhone and Apple only allows native iOS apps to read it directly —
+                  a website like this one can't connect to HealthKit on its own. "Connect" here marks your account as
+                  linked; to actually pull in steps, heart rate, sleep, and weight from Apple Health, Cuff needs a
+                  companion iOS app (or a sync service like Terra, Vital, or Spike) to bridge HealthKit data into your
+                  readings. Until that's built, connecting here won't sync data automatically — you can still log
+                  everything yourself from the Activity and Lab tabs.
+                </p>
+              </Card>
+            )}
+
+            {activitySubTab === "activity" && (
+              <>
             <ActivitySection
               Icon={Footprints} label="Steps" dataKey="value" unit=" steps" decimals={0}
               latest={latestSteps} prev={prevSteps} data={stepsReadings} color={COLORS.primary}
               recommendedValue={activePatientProfile?.recommended_steps ?? null}
-              onOpen={() => { setActivityDetailId("steps"); setPage("activityDetail"); }}
+              onOpen={() => { setMetricDetailId("steps"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Moon} label="Sleep" dataKey="hours" unit=" hrs" decimals={1}
               latest={latestSleep} prev={prevSleep} data={sleepReadings} color={COLORS.primarySoft}
               recommendedValue={activePatientProfile?.recommended_sleep_hours ?? null}
-              onOpen={() => { setActivityDetailId("sleep"); setPage("activityDetail"); }}
+              onOpen={() => { setMetricDetailId("sleep"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Dumbbell} label="Workout minutes" dataKey="minutes" unit=" min" decimals={0}
               latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.elevated}
               recommendedValue={activePatientProfile?.recommended_workout_weight_minutes ?? null}
-              onOpen={() => { setActivityDetailId("workoutWeight"); setPage("activityDetail"); }}
+              onOpen={() => { setMetricDetailId("workoutWeight"); setPage("metricDetail"); }}
             />
             <ActivitySection
               Icon={Footprints} label="Cardio / Walk" dataKey="minutes" unit=" min" decimals={0}
               latest={latestWorkoutCardio} prev={prevWorkoutCardio} data={workoutCardioEntries} color={COLORS.normal}
               recommendedValue={activePatientProfile?.recommended_workout_cardio_minutes ?? null}
-              onOpen={() => { setActivityDetailId("workoutCardio"); setPage("activityDetail"); }}
+              onOpen={() => { setMetricDetailId("workoutCardio"); setPage("metricDetail"); }}
             />
 
             <Card>
@@ -1157,7 +1305,7 @@ export default function App() {
                     <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
                   )}
                 </div>
-                <div onClick={() => { setActivityDetailId("heartRate"); setPage("activityDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+                <div onClick={() => { setMetricDetailId("heartRate"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
                   <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
                   {heartRateReadings.length > 0 ? (
                     <ResponsiveContainer width="100%" height={110}>
@@ -1165,6 +1313,12 @@ export default function App() {
                         <YAxis hide />
                         <Bar dataKey="min_bpm" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
                         <Bar dataKey="max_bpm" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
+                        {typeof activePatientProfile?.recommended_heart_rate_min === "number" && (
+                          <ReferenceLine y={activePatientProfile.recommended_heart_rate_min} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
+                        )}
+                        {typeof activePatientProfile?.recommended_heart_rate_max === "number" && (
+                          <ReferenceLine y={activePatientProfile.recommended_heart_rate_max} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
+                        )}
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
@@ -1227,124 +1381,197 @@ export default function App() {
                 </button>
               </Card>
             )}
+              </>
+            )}
           </>
         )}
 
         {activeTab === "lab" && (
           <>
-            {(latestFasting || latestNonFasting || latestA1c) && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Droplet size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <SugarSummaryCard reading={latestFasting} />
-                  <SugarSummaryCard reading={latestNonFasting} />
-                  <SugarSummaryCard reading={latestA1c} />
-                </div>
-              </Card>
-            )}
-
-            {latestBp && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Heart size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
-                </div>
-                <div className="rounded-2xl py-6 mb-4 flex flex-col items-center" style={{ background: COLORS.surfaceAlt }}>
-                  <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT READING</span>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-5xl font-bold">
-                    {latestBp.systolic}<span style={{ color: COLORS.inkSoft, fontWeight: 500 }}>/{latestBp.diastolic}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
-                    <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <MetricCard label="Systolic" value={latestBp.systolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
-                  <MetricCard label="Diastolic" value={latestBp.diastolic} unit="mmHg" zoneLabel={latestBpZone.label} zoneColor={latestBpZone.color} />
-                  <MetricCard label="Pulse" value={latestBp.pulse} unit="bpm" zoneLabel={pulseZone(latestBp.pulse).label} zoneColor={pulseZone(latestBp.pulse).color} />
-                </div>
-              </Card>
-            )}
-
-            {profile.role === "Patient" && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity size={16} color={COLORS.primary} />
-                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood pressure</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Systolic</label>
-                    <input type="number" value={sys} onChange={(e) => setSys(e.target.value)} placeholder="120" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Diastolic</label>
-                    <input type="number" value={dia} onChange={(e) => setDia(e.target.value)} placeholder="80" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Pulse</label>
-                    <input type="number" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="72" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                </div>
-                <button onClick={addBpReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-                  <Plus size={14} /> Save blood pressure
+            <div
+              className="flex gap-2 mb-5 sticky top-0 z-10 py-2"
+              style={{ background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              {[
+                { id: "readings", label: "Readings" },
+                { id: "upload", label: "Upload" },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setLabSubTab(t.id)}
+                  className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                  style={
+                    labSubTab === t.id
+                      ? { background: COLORS.ink, color: "#fff" }
+                      : { background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
+                  }
+                >
+                  {t.label}
                 </button>
-              </Card>
-            )}
+              ))}
+            </div>
 
-            {profile.role === "Patient" && (
-              <Card>
-                <div className="flex items-center gap-2 mb-4">
-                  <Droplet size={16} color={COLORS.primary} />
-                  <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood sugar</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Fasting</label>
-                    <input type="number" value={fastingValue} onChange={(e) => setFastingValue(e.target.value)} placeholder="95" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Non-fasting</label>
-                    <input type="number" value={nonFastingValue} onChange={(e) => setNonFastingValue(e.target.value)} placeholder="130" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                  <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
-                    <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="5.6" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                </div>
-                <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
-                  <Plus size={14} /> Save blood sugar
-                </button>
-              </Card>
-            )}
+            {labSubTab === "readings" && (
+              <>
+                <Card>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Heart size={16} color={COLORS.primary} />
+                    <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col items-center justify-center">
+                      <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
+                      {latestBp ? (
+                        <>
+                          <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                            {latestBp.systolic}<span style={{ color: COLORS.inkSoft, fontWeight: 500 }}>/{latestBp.diastolic}</span>
+                          </div>
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
+                          <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
+                        </>
+                      ) : (
+                        <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
+                      )}
+                    </div>
+                    <div onClick={() => { setMetricDetailId("bloodPressure"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+                      <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+                      {bpReadings.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={110}>
+                          <BarChart data={bpReadings.slice(-5).map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+                            <YAxis hide />
+                            <Bar dataKey="systolic" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
+                            <Bar dataKey="diastolic" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
+                            {typeof activePatientProfile?.recommended_bp_systolic === "number" && (
+                              <ReferenceLine y={activePatientProfile.recommended_bp_systolic} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
+                            )}
+                            {typeof activePatientProfile?.recommended_bp_diastolic === "number" && (
+                              <ReferenceLine y={activePatientProfile.recommended_bp_diastolic} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
+                            )}
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center" style={{ height: 110 }}>
+                          <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
 
-            {bpReadings.length > 0 && (
-              <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure history</span>
-                <HistoryBarChart
-                  data={bpReadings}
-                  dataKey="systolic"
-                  unit=""
-                  colorForEntry={(r) => categorizeBP(r.systolic, r.diastolic).color}
+                <ActivitySection
+                  Icon={Droplet} label="Fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
+                  latest={latestFasting} prev={prevFasting} data={fastingEntries} color={COLORS.normal}
+                  recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? null}
+                  onOpen={() => { setMetricDetailId("fastingSugar"); setPage("metricDetail"); }}
                 />
-              </Card>
+                <ActivitySection
+                  Icon={Droplet} label="Non-fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
+                  latest={latestNonFasting} prev={prevNonFasting} data={nonFastingEntries} color={COLORS.elevated}
+                  recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? null}
+                  onOpen={() => { setMetricDetailId("nonFastingSugar"); setPage("metricDetail"); }}
+                />
+                <ActivitySection
+                  Icon={Droplet} label="A1C" dataKey="value" unit="%" decimals={1}
+                  latest={latestA1c} prev={prevA1c} data={a1cEntries} color={COLORS.primarySoft}
+                  recommendedValue={activePatientProfile?.recommended_sugar_a1c ?? null}
+                  onOpen={() => { setMetricDetailId("a1c"); setPage("metricDetail"); }}
+                />
+
+                {profile.role === "Patient" && (
+                  <Card>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Activity size={16} color={COLORS.primary} />
+                      <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood pressure</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Systolic</label>
+                        <input type="number" value={sys} onChange={(e) => setSys(e.target.value)} placeholder="120" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Diastolic</label>
+                        <input type="number" value={dia} onChange={(e) => setDia(e.target.value)} placeholder="80" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Pulse</label>
+                        <input type="number" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="72" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                    </div>
+                    <button onClick={addBpReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                      <Plus size={14} /> Save blood pressure
+                    </button>
+                  </Card>
+                )}
+
+                {profile.role === "Patient" && (
+                  <Card>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Droplet size={16} color={COLORS.primary} />
+                      <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood sugar</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Fasting</label>
+                        <input type="number" value={fastingValue} onChange={(e) => setFastingValue(e.target.value)} placeholder="95" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Non-fasting</label>
+                        <input type="number" value={nonFastingValue} onChange={(e) => setNonFastingValue(e.target.value)} placeholder="130" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
+                        <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="5.6" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
+                    </div>
+                    <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                      <Plus size={14} /> Save blood sugar
+                    </button>
+                  </Card>
+                )}
+              </>
             )}
 
-            {sugarReadings.length > 0 && (
+            {labSubTab === "upload" && (
               <Card>
-                <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar history</span>
-                <div className="flex flex-col gap-5">
-                  {SUGAR_TYPES.map((t) => {
-                    const entries = sugarReadings.filter((r) => r.type === t.id);
-                    return (
-                      <div key={t.id}>
-                        <span className="text-xs font-semibold tracking-wide block mb-1.5" style={{ color: COLORS.inkSoft }}>{t.label.toUpperCase()}</span>
-                        {entries.length === 0 ? (
-                          <div className="text-xs py-2" style={{ color: COLORS.inkSoft }}>No readings yet</div>
-                        ) : (
-                          <HistoryBarChart
-                            data={entries}
-                            dataKey="value"
-                            unit={t.unit === "%" ? "%" : ` ${t.unit}`}
-                            colorForEntry={(r) => categorizeSugar(t.id, r.value).color}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText size={16} color={COLORS.primary} />
+                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Lab reports</span>
                 </div>
+
+                {profile.role === "Patient" && (
+                  <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Upload a PDF or photo of your report</label>
+                    <input
+                      key={fileInputKey}
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                      className="w-full text-sm mb-3"
+                      style={{ color: COLORS.ink }}
+                    />
+                    <button
+                      onClick={uploadLabReport}
+                      disabled={!selectedFile || uploadingFile}
+                      className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium"
+                      style={{ background: COLORS.ink, color: "#fff", opacity: !selectedFile || uploadingFile ? 0.5 : 1 }}
+                    >
+                      <Plus size={14} /> {uploadingFile ? "Uploading..." : "Upload report"}
+                    </button>
+                  </div>
+                )}
+
+                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>UPLOADED REPORTS</span>
+                {labReports.length === 0 ? (
+                  <p className="text-sm" style={{ color: COLORS.inkSoft }}>No reports uploaded yet.</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {labReports.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => viewLabReport(r)}
+                        className="flex items-center justify-between gap-3 rounded-xl p-3.5 text-left w-full"
+                        style={{ background: COLORS.surfaceAlt }}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <FileText size={16} color={COLORS.primary} className="flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-sm truncate" style={{ color: COLORS.ink }}>{r.file_name}</p>
+                            <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(r.created_at)} · {daysAgoLabel(r.created_at)}</span>
+                          </div>
+                        </div>
+                        <ChevronRight size={16} color={COLORS.inkSoft} className="flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </Card>
             )}
           </>
@@ -1500,9 +1727,8 @@ export default function App() {
             >
               {[
                 { id: "personal", label: "Personal" },
-                { id: "medical", label: "Medical background" },
-                { id: "family", label: "Family history" },
-                { id: "sensors", label: "Connect Sensor" },
+                { id: "medical", label: "Medical" },
+                { id: "family", label: "Family" },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -1707,43 +1933,6 @@ export default function App() {
               </>
             )}
 
-            {profileSubTab === "sensors" && (
-              <>
-                <div className="rounded-2xl p-4 mb-4 flex items-center gap-3.5" style={{ background: COLORS.surfaceAlt }}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
-                    <Apple size={20} color={COLORS.ink} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-semibold block" style={{ color: COLORS.ink }}>Apple Health</span>
-                    {profile.apple_health_connected ? (
-                      <span className="text-xs flex items-center gap-1 mt-0.5" style={{ color: COLORS.normal }}>
-                        <CheckCircle2 size={12} /> Connected {profile.apple_health_connected_at ? `· ${daysAgoLabel(profile.apple_health_connected_at)}` : ""}
-                      </span>
-                    ) : (
-                      <span className="text-xs block mt-0.5" style={{ color: COLORS.inkSoft }}>Not connected</span>
-                    )}
-                  </div>
-                  {profile.apple_health_connected ? (
-                    <button onClick={disconnectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
-                      Disconnect
-                    </button>
-                  ) : (
-                    <button onClick={connectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
-                      Connect
-                    </button>
-                  )}
-                </div>
-
-                <p className="text-xs leading-relaxed" style={{ color: COLORS.inkSoft }}>
-                  Apple Health data lives on your iPhone and Apple only allows native iOS apps to read it directly —
-                  a website like this one can't connect to HealthKit on its own. "Connect" here marks your account as
-                  linked; to actually pull in steps, heart rate, sleep, and weight from Apple Health, Cuff needs a
-                  companion iOS app (or a sync service like Terra, Vital, or Spike) to bridge HealthKit data into your
-                  readings. Until that's built, connecting here won't sync data automatically — you can still log
-                  everything yourself from the Activity and Lab tabs.
-                </p>
-              </>
-            )}
           </Card>
         )}
       </div>
