@@ -317,13 +317,19 @@ export default function App() {
   const [medicalSaved, setMedicalSaved] = useState(false);
   const [familySaved, setFamilySaved] = useState(false);
   const [profile, setProfile] = useState(null);
-  const [authMode, setAuthMode] = useState("signin"); // 'signin' | 'signup'
+  const [authMode, setAuthMode] = useState("signin"); // 'signin' | 'signup' | 'forgotPassword'
   const [name, setName] = useState("");
   const [role, setRole] = useState("Patient");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState("");
+  const [newPasswordLoading, setNewPasswordLoading] = useState(false);
 
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState(null);
@@ -370,7 +376,10 @@ export default function App() {
   // Track auth session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      if (event === "PASSWORD_RECOVERY") setIsPasswordRecovery(true);
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
 
@@ -502,6 +511,28 @@ export default function App() {
       if (error) { setAuthError(error.message); setLoading(false); return; }
     }
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    setAuthError("");
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    if (error) { setAuthError(error.message); setLoading(false); return; }
+    setResetSent(true);
+    setLoading(false);
+  };
+
+  const handleSetNewPassword = async () => {
+    setNewPasswordError("");
+    if (newPassword.length < 6) { setNewPasswordError("Password must be at least 6 characters."); return; }
+    if (newPassword !== newPasswordConfirm) { setNewPasswordError("Passwords don't match."); return; }
+    setNewPasswordLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) { setNewPasswordError(error.message); setNewPasswordLoading(false); return; }
+    setIsPasswordRecovery(false);
+    setNewPassword("");
+    setNewPasswordConfirm("");
+    setNewPasswordLoading(false);
   };
 
   const handleLogout = async () => {
@@ -770,6 +801,41 @@ export default function App() {
     }
   });
 
+  // ---------- PASSWORD RECOVERY SCREEN ----------
+  if (isPasswordRecovery) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center p-6" style={{ background: COLORS.bg }}>
+        <div className="w-full max-w-sm rounded-3xl p-9" style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, boxShadow: "0 30px 60px -20px rgba(22,35,31,0.20)" }}>
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
+              <Lock size={24} color="#fff" />
+            </div>
+            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-2xl text-center">Set a new password</h1>
+            <p className="text-sm mt-2 text-center" style={{ color: COLORS.inkSoft }}>Choose a new password for your account.</p>
+          </div>
+
+          <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>NEW PASSWORD</label>
+          <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-4" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+            <Lock size={16} color={COLORS.inkSoft} />
+            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 6 characters" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
+          </div>
+
+          <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>CONFIRM NEW PASSWORD</label>
+          <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-2" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+            <Lock size={16} color={COLORS.inkSoft} />
+            <input type="password" value={newPasswordConfirm} onChange={(e) => setNewPasswordConfirm(e.target.value)} placeholder="Re-enter password" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
+          </div>
+
+          {newPasswordError && <p className="text-xs mb-3" style={{ color: COLORS.high }}>{newPasswordError}</p>}
+
+          <button onClick={handleSetNewPassword} disabled={newPasswordLoading} className="w-full py-3 mt-4 rounded-xl text-sm font-semibold" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})`, color: "#fff" }}>
+            {newPasswordLoading ? "Saving..." : "Save new password"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // ---------- AUTH SCREEN ----------
   if (!session || !profile) {
     return (
@@ -783,45 +849,90 @@ export default function App() {
             <p className="text-sm mt-2 text-center" style={{ color: COLORS.inkSoft }}>Log your readings. Share them with your doctor.</p>
           </div>
 
-          <div className="flex rounded-xl overflow-hidden mb-5" style={{ border: `1px solid ${COLORS.border}` }}>
-            <button onClick={() => setAuthMode("signin")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signin" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign in</button>
-            <button onClick={() => setAuthMode("signup")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signup" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign up</button>
-          </div>
-
-          {authMode === "signup" && (
+          {authMode === "forgotPassword" ? (
             <>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>FULL NAME</label>
-              <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-4" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
-                <User size={16} color={COLORS.inkSoft} />
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Rivera" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
+              <button
+                onClick={() => { setAuthMode("signin"); setResetSent(false); setAuthError(""); }}
+                className="flex items-center gap-1.5 text-xs font-medium mb-5"
+                style={{ color: COLORS.inkSoft }}
+              >
+                <ArrowLeft size={14} /> Back to sign in
+              </button>
+
+              {resetSent ? (
+                <p className="text-sm text-center" style={{ color: COLORS.ink }}>
+                  Check <strong>{email}</strong> for a link to reset your password.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm mb-4" style={{ color: COLORS.inkSoft }}>Enter your email and we'll send you a link to reset your password.</p>
+                  <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>EMAIL</label>
+                  <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-4" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <Mail size={16} color={COLORS.inkSoft} />
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
+                  </div>
+
+                  {authError && <p className="text-xs mb-3" style={{ color: COLORS.high }}>{authError}</p>}
+
+                  <button onClick={handleForgotPassword} disabled={loading} className="w-full py-3 mt-1 rounded-xl text-sm font-semibold" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})`, color: "#fff" }}>
+                    {loading ? "Sending..." : "Send reset link"}
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex rounded-xl overflow-hidden mb-5" style={{ border: `1px solid ${COLORS.border}` }}>
+                <button onClick={() => setAuthMode("signin")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signin" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign in</button>
+                <button onClick={() => setAuthMode("signup")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signup" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign up</button>
               </div>
-              <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>I AM A</label>
+
+              {authMode === "signup" && (
+                <>
+                  <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>FULL NAME</label>
+                  <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-4" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <User size={16} color={COLORS.inkSoft} />
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Rivera" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
+                  </div>
+                  <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>I AM A</label>
+                  <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-4" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                    <select value={role} onChange={(e) => setRole(e.target.value)} className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }}>
+                      <option value="Patient">Patient</option>
+                      <option value="Doctor">Doctor</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>EMAIL</label>
               <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-4" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
-                <select value={role} onChange={(e) => setRole(e.target.value)} className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }}>
-                  <option value="Patient">Patient</option>
-                  <option value="Doctor">Doctor</option>
-                </select>
+                <Mail size={16} color={COLORS.inkSoft} />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
               </div>
+
+              <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>PASSWORD</label>
+              <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-2" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
+                <Lock size={16} color={COLORS.inkSoft} />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
+              </div>
+
+              {authMode === "signin" && (
+                <button
+                  onClick={() => { setAuthMode("forgotPassword"); setAuthError(""); }}
+                  className="text-xs font-medium block mb-3"
+                  style={{ color: COLORS.primarySoft }}
+                >
+                  Forgot password?
+                </button>
+              )}
+
+              {authError && <p className="text-xs mb-3" style={{ color: COLORS.high }}>{authError}</p>}
+
+              <button onClick={handleAuth} disabled={loading} className="w-full py-3 mt-2 rounded-xl text-sm font-semibold" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})`, color: "#fff" }}>
+                {loading ? "Please wait..." : authMode === "signup" ? "Create account" : "Sign in"}
+              </button>
             </>
           )}
-
-          <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>EMAIL</label>
-          <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-4" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
-            <Mail size={16} color={COLORS.inkSoft} />
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
-          </div>
-
-          <label className="text-xs font-medium block mb-1.5" style={{ color: COLORS.inkSoft }}>PASSWORD</label>
-          <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-2" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
-            <Lock size={16} color={COLORS.inkSoft} />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="bg-transparent outline-none text-sm w-full" style={{ color: COLORS.ink }} />
-          </div>
-
-          {authError && <p className="text-xs mb-3" style={{ color: COLORS.high }}>{authError}</p>}
-
-          <button onClick={handleAuth} disabled={loading} className="w-full py-3 mt-4 rounded-xl text-sm font-semibold" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})`, color: "#fff" }}>
-            {loading ? "Please wait..." : authMode === "signup" ? "Create account" : "Sign in"}
-          </button>
         </div>
       </div>
     );
