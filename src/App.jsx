@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight, Apple, CheckCircle2 } from "lucide-react";
+import { Heart, Share2, LogOut, Plus, Lock, Mail, Activity, Droplet, FileText, Check, User, Scale, Footprints, Dumbbell, Moon, HeartPulse, ArrowLeft, Home, FlaskConical, Stethoscope, Bell, Send, AlertTriangle, ChevronRight, Apple, CheckCircle2, Settings as SettingsIcon, CreditCard } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { supabase } from "./supabaseClient";
 
@@ -197,7 +197,7 @@ function HistoryBarChart({ data, dataKey, colorForEntry, unit = "", height = 160
             y={referenceValue}
             stroke={COLORS.ink}
             strokeDasharray="4 4"
-            strokeWidth={1.5}
+            strokeWidth={1} strokeOpacity={0.45}
             ifOverflow="extendDomain"
             label={showAxis ? { value: referenceLabel || `Target: ${referenceValue}${unit}`, position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft } : undefined}
           />
@@ -939,12 +939,12 @@ export default function App() {
                     <Bar dataKey="max_bpm" name="Max" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
                     <ReferenceLine
                       y={activePatientProfile?.recommended_heart_rate_min ?? 60}
-                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5}
+                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
                       label={{ value: activePatientProfile?.recommended_heart_rate_min != null ? `Target min: ${activePatientProfile.recommended_heart_rate_min}` : "Suggested min: 60", position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }}
                     />
                     <ReferenceLine
                       y={activePatientProfile?.recommended_heart_rate_max ?? 100}
-                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5}
+                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
                       label={{ value: activePatientProfile?.recommended_heart_rate_max != null ? `Target max: ${activePatientProfile.recommended_heart_rate_max}` : "Suggested max: 100", position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }}
                     />
                   </BarChart>
@@ -967,12 +967,12 @@ export default function App() {
                     <Bar dataKey="diastolic" name="Diastolic" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
                     <ReferenceLine
                       y={activePatientProfile?.recommended_bp_systolic ?? 120}
-                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5}
+                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
                       label={{ value: activePatientProfile?.recommended_bp_systolic != null ? `Target systolic: ${activePatientProfile.recommended_bp_systolic}` : "Suggested systolic: 120", position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }}
                     />
                     <ReferenceLine
                       y={activePatientProfile?.recommended_bp_diastolic ?? 80}
-                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5}
+                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
                       label={{ value: activePatientProfile?.recommended_bp_diastolic != null ? `Target diastolic: ${activePatientProfile.recommended_bp_diastolic}` : "Suggested diastolic: 80", position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }}
                     />
                   </BarChart>
@@ -1034,6 +1034,46 @@ export default function App() {
                 </div>
               )}
             </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- SETTINGS PAGE ----------
+  if (page === "settings") {
+    return (
+      <div className="min-h-screen w-full" style={{ background: COLORS.bg }}>
+        <div className="max-w-2xl mx-auto p-5">
+          <button
+            onClick={() => setPage("dashboard")}
+            className="flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl mb-5"
+            style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          <Card>
+            <div className="flex items-center gap-2 mb-4">
+              <SettingsIcon size={16} color={COLORS.primary} />
+              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Settings</span>
+            </div>
+
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-3">
+                <CreditCard size={16} color={COLORS.primary} />
+                <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Membership</span>
+              </div>
+              <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                <span className="text-sm font-semibold block" style={{ color: COLORS.ink }}>Free plan</span>
+                <span className="text-xs block mt-1" style={{ color: COLORS.inkSoft }}>
+                  All features are available at no cost while Cuff is in testing. There's no paid plan or billing set up yet.
+                </span>
+              </div>
+            </div>
+
+            <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+              <LogOut size={14} /> Log out
+            </button>
           </Card>
         </div>
       </div>
@@ -1329,8 +1369,8 @@ export default function App() {
                         <YAxis hide />
                         <Bar dataKey="min_bpm" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
                         <Bar dataKey="max_bpm" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
-                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_min ?? 60} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
-                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_max ?? 100} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
+                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_min ?? 60} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
+                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_max ?? 100} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
@@ -1453,8 +1493,8 @@ export default function App() {
                             <YAxis hide />
                             <Bar dataKey="systolic" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={12} />
                             <Bar dataKey="diastolic" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={12} />
-                            <ReferenceLine y={activePatientProfile?.recommended_bp_systolic ?? 120} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1.5} />
-                            <ReferenceLine y={activePatientProfile?.recommended_bp_diastolic ?? 80} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1.5} />
+                            <ReferenceLine y={activePatientProfile?.recommended_bp_systolic ?? 120} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
+                            <ReferenceLine y={activePatientProfile?.recommended_bp_diastolic ?? 80} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
@@ -1714,18 +1754,17 @@ export default function App() {
 
         {activeTab === "profile" && (
           <Card>
-            <div className="flex items-center gap-2 mb-4">
-              <User size={16} color={COLORS.primary} />
-              <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile</span>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-xl p-3.5 mb-5" style={{ background: COLORS.surfaceAlt }}>
-              <div>
-                <span className="text-xs font-semibold block mb-1" style={{ color: COLORS.inkSoft }}>ROLE</span>
-                <span className="text-sm" style={{ color: COLORS.ink }}>{profile.role}</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <User size={16} color={COLORS.primary} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Profile</span>
               </div>
-              <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
-                <LogOut size={14} /> Log out
+              <button
+                onClick={() => setPage("settings")}
+                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}
+              >
+                <SettingsIcon size={16} color={COLORS.inkSoft} />
               </button>
             </div>
 
