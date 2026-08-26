@@ -115,11 +115,12 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_workout_cardio_minutes", label: "Recommended minutes/day", placeholder: "30", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "heartRate", label: "Daily heart rate", Icon: HeartPulse, unit: " bpm", dataKey: null, decimals: 0, color: null,
-    recommendedFields: [
-      { key: "recommended_heart_rate_min", label: "Recommended min (bpm)", placeholder: "60", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
-      { key: "recommended_heart_rate_max", label: "Recommended max (bpm)", placeholder: "100", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
-    ],
+    id: "heartRateMin", label: "Min heart rate", Icon: HeartPulse, unit: " bpm", dataKey: "min_bpm", decimals: 0, color: COLORS.activityPrimary,
+    recommendedFields: [{ key: "recommended_heart_rate_min", label: "Recommended min (bpm)", placeholder: "60", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
+  },
+  {
+    id: "heartRateMax", label: "Max heart rate", Icon: HeartPulse, unit: " bpm", dataKey: "max_bpm", decimals: 0, color: COLORS.activityPrimary,
+    recommendedFields: [{ key: "recommended_heart_rate_max", label: "Recommended max (bpm)", placeholder: "100", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
     id: "fastingSugar", label: "Fasting sugar", Icon: Droplet, unit: " mg/dL", dataKey: "value", decimals: 0, color: COLORS.normal,
@@ -142,7 +143,7 @@ const METRIC_DEFS = [
   },
 ];
 
-const ACTIVITY_METRIC_IDS = ["steps", "sleep", "workoutWeight", "workoutCardio", "heartRate"];
+const ACTIVITY_METRIC_IDS = ["steps", "sleep", "workoutWeight", "workoutCardio", "heartRateMin", "heartRateMax"];
 
 function formatDOBForInput(isoDate) {
   if (!isoDate) return "";
@@ -762,6 +763,7 @@ export default function App() {
   const latestSleep = sleepReadings[sleepReadings.length - 1];
   const prevSleep = sleepReadings[sleepReadings.length - 2];
   const latestHeartRate = heartRateReadings[heartRateReadings.length - 1];
+  const prevHeartRate = heartRateReadings[heartRateReadings.length - 2];
   const fastingEntries = sugarReadings.filter((r) => r.type === "fasting");
   const nonFastingEntries = sugarReadings.filter((r) => r.type === "nonfasting");
   const a1cEntries = sugarReadings.filter((r) => r.type === "a1c");
@@ -786,6 +788,8 @@ export default function App() {
     sleep: { data: sleepReadings, latest: latestSleep, prev: prevSleep },
     workoutWeight: { data: workoutWeightEntries, latest: latestWorkoutWeight, prev: prevWorkoutWeight },
     workoutCardio: { data: workoutCardioEntries, latest: latestWorkoutCardio, prev: prevWorkoutCardio },
+    heartRateMin: { data: heartRateReadings, latest: latestHeartRate, prev: prevHeartRate },
+    heartRateMax: { data: heartRateReadings, latest: latestHeartRate, prev: prevHeartRate },
     fastingSugar: { data: fastingEntries, latest: latestFasting, prev: prevFasting },
     nonFastingSugar: { data: nonFastingEntries, latest: latestNonFasting, prev: prevNonFasting },
     a1c: { data: a1cEntries, latest: latestA1c, prev: prevA1c },
@@ -1038,35 +1042,7 @@ export default function App() {
               <span className="text-lg font-semibold" style={{ color: ACTIVITY_METRIC_IDS.includes(metricDetailId) ? COLORS.activityPrimary : COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
             </div>
 
-            {metricDetailId === "heartRate" ? (
-              heartRateReadings.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={heartRateReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                    <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip
-                      cursor={{ fill: COLORS.surfaceAlt }}
-                      contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
-                      labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
-                    />
-                    <Bar dataKey="min_bpm" name="Min" fill={COLORS.activityPrimary} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    <Bar dataKey="max_bpm" name="Max" fill={COLORS.activityPrimary} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    <ReferenceLine
-                      y={activePatientProfile?.recommended_heart_rate_min ?? 60}
-                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
-                      label={{ value: activePatientProfile?.recommended_heart_rate_min != null ? `Target min: ${activePatientProfile.recommended_heart_rate_min}` : "Suggested min: 60", position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }}
-                    />
-                    <ReferenceLine
-                      y={activePatientProfile?.recommended_heart_rate_max ?? 100}
-                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
-                      label={{ value: activePatientProfile?.recommended_heart_rate_max != null ? `Target max: ${activePatientProfile.recommended_heart_rate_max}` : "Suggested max: 100", position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No heart rate readings yet.</p>
-              )
-            ) : metricDetailId === "bloodPressure" ? (
+            {metricDetailId === "bloodPressure" ? (
               bpReadings.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={bpReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
@@ -1382,7 +1358,7 @@ export default function App() {
                   className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
                   style={
                     activitySubTab === t.id
-                      ? { background: COLORS.ink, color: "#fff" }
+                      ? { background: COLORS.activityPrimary, color: "#fff" }
                       : { background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
                   }
                 >
@@ -1456,45 +1432,18 @@ export default function App() {
               onOpen={() => { setMetricDetailId("workoutCardio"); setPage("metricDetail"); }}
             />
 
-            <Card>
-              <div className="flex items-center gap-2 mb-4">
-                <HeartPulse size={16} color={COLORS.activityPrimary} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.activityPrimary, fontFamily: "'Space Grotesk', sans-serif" }}>Daily heart rate</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col items-center justify-center">
-                  <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
-                  {latestHeartRate ? (
-                    <>
-                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.activityPrimary }} className="text-4xl font-bold">
-                        {latestHeartRate.min_bpm}–{latestHeartRate.max_bpm}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> bpm</span>
-                      </div>
-                      <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestHeartRate.created_at)} · {daysAgoLabel(latestHeartRate.created_at)}</span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
-                  )}
-                </div>
-                <div onClick={() => { setMetricDetailId("heartRate"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
-                  <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
-                  {heartRateReadings.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={110}>
-                      <BarChart data={heartRateReadings.slice(-5).map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                        <YAxis hide />
-                        <Bar dataKey="min_bpm" fill={COLORS.activityPrimary} radius={[4, 4, 0, 0]} maxBarSize={12} />
-                        <Bar dataKey="max_bpm" fill={COLORS.activityPrimary} radius={[4, 4, 0, 0]} maxBarSize={12} />
-                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_min ?? 60} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
-                        <ReferenceLine y={activePatientProfile?.recommended_heart_rate_max ?? 100} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex items-center justify-center" style={{ height: 110 }}>
-                      <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
+            <ActivitySection
+              Icon={HeartPulse} label="Min heart rate" dataKey="min_bpm" unit=" bpm" decimals={0}
+              latest={latestHeartRate} prev={prevHeartRate} data={heartRateReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
+              recommendedValue={activePatientProfile?.recommended_heart_rate_min ?? 60}
+              onOpen={() => { setMetricDetailId("heartRateMin"); setPage("metricDetail"); }}
+            />
+            <ActivitySection
+              Icon={HeartPulse} label="Max heart rate" dataKey="max_bpm" unit=" bpm" decimals={0}
+              latest={latestHeartRate} prev={prevHeartRate} data={heartRateReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
+              recommendedValue={activePatientProfile?.recommended_heart_rate_max ?? 100}
+              onOpen={() => { setMetricDetailId("heartRateMax"); setPage("metricDetail"); }}
+            />
 
             {profile.role === "Patient" && (
               <Card>
@@ -1503,45 +1452,40 @@ export default function App() {
                   <span className="text-sm font-semibold" style={{ color: COLORS.activityPrimary }}>Log activity</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Steps</label>
-                    <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Sleep (hrs)</label>
-                    <input type="number" step="0.1" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Steps</label>
+                  <input type="number" value={stepsValue} onChange={(e) => setStepsValue(e.target.value)} placeholder="8000" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>WORKOUT MINUTES</span>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Weight</label>
-                    <input type="number" value={workoutWeightValue} onChange={(e) => setWorkoutWeightValue(e.target.value)} placeholder="30" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Cardio / Walk</label>
-                    <input type="number" value={workoutCardioValue} onChange={(e) => setWorkoutCardioValue(e.target.value)} placeholder="20" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Sleep (hrs)</label>
+                  <input type="number" step="0.1" value={sleepValue} onChange={(e) => setSleepValue(e.target.value)} placeholder="7.5" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
-                <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>DAILY HEART RATE</span>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Min (bpm)</label>
-                    <input type="number" value={hrMinValue} onChange={(e) => setHrMinValue(e.target.value)} placeholder="58" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
-                  <div>
-                    <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Max (bpm)</label>
-                    <input type="number" value={hrMaxValue} onChange={(e) => setHrMaxValue(e.target.value)} placeholder="142" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  </div>
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Workout (mins)</label>
+                  <input type="number" value={workoutWeightValue} onChange={(e) => setWorkoutWeightValue(e.target.value)} placeholder="30" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Cardio / Walk (mins)</label>
+                  <input type="number" value={workoutCardioValue} onChange={(e) => setWorkoutCardioValue(e.target.value)} placeholder="20" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Min Heart Rate (bpm)</label>
+                  <input type="number" value={hrMinValue} onChange={(e) => setHrMinValue(e.target.value)} placeholder="58" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
+                </div>
+
+                <div className="mb-4">
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Max Heart Rate (bpm)</label>
+                  <input type="number" value={hrMaxValue} onChange={(e) => setHrMaxValue(e.target.value)} placeholder="142" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
                 <button
                   onClick={() => { addStepsReading(); addWorkoutReadings(); addSleepReading(); addHeartRateReading(); }}
                   className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium"
-                  style={{ background: COLORS.ink, color: "#fff" }}
+                  style={{ background: COLORS.activityPrimary, color: "#fff" }}
                 >
                   <Plus size={14} /> Save activity
                 </button>
