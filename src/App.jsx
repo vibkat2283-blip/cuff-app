@@ -145,6 +145,71 @@ const METRIC_DEFS = [
 
 const ACTIVITY_METRIC_IDS = ["steps", "sleep", "workoutWeight", "workoutCardio", "heartRateMin", "heartRateMax"];
 
+const LAB_DETAIL_SECTIONS = [
+  {
+    id: "cbc", label: "Complete Blood Count",
+    metrics: [
+      { key: "hb", label: "Hb" }, { key: "rbc", label: "RBC" }, { key: "hct", label: "HCT" },
+      { key: "mcv", label: "MCV" }, { key: "mch", label: "MCH" }, { key: "mchc", label: "MCHC" },
+      { key: "wbc", label: "WBC" }, { key: "platelets", label: "Platelets" },
+    ],
+  },
+  {
+    id: "glucose", label: "Glucose / Metabolic",
+    metrics: [
+      { key: "fasting_glucose", label: "Fasting glucose" }, { key: "pp_glucose", label: "PP glucose" },
+      { key: "hba1c", label: "HbA1c" }, { key: "fasting_insulin", label: "Fasting insulin" },
+      { key: "homa_ir", label: "HOMA-IR" }, { key: "fructosamine", label: "Fructosamine" },
+    ],
+  },
+  {
+    id: "lipids", label: "Lipids",
+    metrics: [
+      { key: "tc", label: "TC" }, { key: "ldl_c", label: "LDL-C" }, { key: "hdl_c", label: "HDL-C" },
+      { key: "tg", label: "TG" }, { key: "non_hdl_c", label: "Non-HDL-C" }, { key: "apob", label: "ApoB" },
+      { key: "apoa1", label: "ApoA1" }, { key: "lpa", label: "Lp(a)" },
+    ],
+  },
+  {
+    id: "liver", label: "Liver",
+    metrics: [
+      { key: "ast", label: "AST" }, { key: "alt", label: "ALT" }, { key: "ggt", label: "GGT" },
+      { key: "alp", label: "ALP" }, { key: "bilirubin", label: "Bilirubin" }, { key: "albumin", label: "Albumin" },
+      { key: "total_protein", label: "Total protein" },
+    ],
+  },
+  {
+    id: "kidney", label: "Kidney",
+    metrics: [
+      { key: "creatinine", label: "Creatinine" }, { key: "egfr", label: "eGFR" },
+      { key: "urea", label: "Urea" }, { key: "cystatin_c", label: "Cystatin-C" },
+    ],
+  },
+  {
+    id: "thyroid", label: "Thyroid",
+    metrics: [{ key: "tsh", label: "TSH" }],
+  },
+  {
+    id: "nutritional", label: "Nutritional",
+    metrics: [
+      { key: "b12", label: "B12" }, { key: "ferritin", label: "Ferritin" }, { key: "iron", label: "Iron" },
+      { key: "tibc", label: "TIBC" }, { key: "transferrin_saturation", label: "Transferrin saturation" },
+      { key: "vitamin_d", label: "Vitamin D" }, { key: "calcium", label: "Calcium" },
+    ],
+  },
+  {
+    id: "inflammation", label: "Inflammation",
+    metrics: [{ key: "hscrp", label: "hsCRP" }, { key: "esr", label: "ESR" }],
+  },
+  {
+    id: "other", label: "Other",
+    metrics: [
+      { key: "homocysteine", label: "Homocysteine" }, { key: "uric_acid", label: "Uric acid" },
+      { key: "testosterone", label: "Testosterone" },
+    ],
+  },
+];
+
 function formatDOBForInput(isoDate) {
   if (!isoDate) return "";
   const d = new Date(isoDate + "T00:00:00");
@@ -366,6 +431,11 @@ export default function App() {
   const [activitySubTab, setActivitySubTab] = useState("activity"); // 'activity' | 'sensors'
   const [labSubTab, setLabSubTab] = useState("readings"); // 'readings' | 'upload'
   const [labReports, setLabReports] = useState([]);
+  const [labMetricReadings, setLabMetricReadings] = useState([]);
+  const [labDetailDrafts, setLabDetailDrafts] = useState(
+    Object.fromEntries(LAB_DETAIL_SECTIONS.flatMap((s) => s.metrics.map((m) => [m.key, ""])))
+  );
+  const [labDetailSaved, setLabDetailSaved] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -479,6 +549,8 @@ export default function App() {
       .then(({ data }) => setMessages(data || []));
     supabase.from("lab_reports").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: false })
       .then(({ data }) => setLabReports(data || []));
+    supabase.from("lab_metric_readings").select("*").eq("patient_id", activePatientId).order("created_at", { ascending: true })
+      .then(({ data }) => setLabMetricReadings(data || []));
   }, [activePatientId]);
 
   // Doctors: check for any unread patient message across all patients, not just the one currently selected
@@ -651,6 +723,22 @@ export default function App() {
   const viewLabReport = async (report) => {
     const { data } = await supabase.storage.from("lab-reports").createSignedUrl(report.file_path, 3600);
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+  };
+
+  const saveLabDetailSection = async (sectionId) => {
+    if (!activePatientId) return;
+    const section = LAB_DETAIL_SECTIONS.find((s) => s.id === sectionId);
+    const rows = section.metrics
+      .filter((m) => labDetailDrafts[m.key]?.trim())
+      .map((m) => ({ patient_id: activePatientId, metric_key: m.key, value: labDetailDrafts[m.key].trim() }));
+    if (rows.length === 0) return;
+    const { data } = await supabase.from("lab_metric_readings").insert(rows).select();
+    if (data) {
+      setLabMetricReadings([...labMetricReadings, ...data]);
+      setLabDetailDrafts({ ...labDetailDrafts, ...Object.fromEntries(section.metrics.map((m) => [m.key, ""])) });
+    }
+    setLabDetailSaved(sectionId);
+    setTimeout(() => setLabDetailSaved(null), 1800);
   };
 
   const savePersonal = async () => {
@@ -1504,6 +1592,7 @@ export default function App() {
             >
               {[
                 { id: "readings", label: "Readings" },
+                { id: "details", label: "Details" },
                 { id: "upload", label: "Upload" },
               ].map((t) => (
                 <button
@@ -1622,6 +1711,64 @@ export default function App() {
                     </button>
                   </Card>
                 )}
+              </>
+            )}
+
+            {labSubTab === "details" && (
+              <>
+                {LAB_DETAIL_SECTIONS.map((section) => (
+                  <Card key={section.id}>
+                    <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{section.label}</span>
+
+                    <div
+                      className={profile.role === "Patient" ? "grid gap-2 pb-1.5" : "grid gap-2 pb-1.5"}
+                      style={{ gridTemplateColumns: profile.role === "Patient" ? "1fr auto 6.5rem" : "1fr auto", borderBottom: `1px solid ${COLORS.border}` }}
+                    >
+                      <span className="text-[10px] font-semibold tracking-wide" style={{ color: COLORS.inkSoft }}>METRIC</span>
+                      <span className="text-[10px] font-semibold tracking-wide text-right" style={{ color: COLORS.inkSoft }}>LATEST</span>
+                      {profile.role === "Patient" && (
+                        <span className="text-[10px] font-semibold tracking-wide text-center" style={{ color: COLORS.inkSoft }}>NEW VALUE</span>
+                      )}
+                    </div>
+
+                    {section.metrics.map((m) => {
+                      const entries = labMetricReadings.filter((r) => r.metric_key === m.key);
+                      const latest = entries[entries.length - 1];
+                      return (
+                        <div
+                          key={m.key}
+                          className="grid gap-2 items-center py-2"
+                          style={{ gridTemplateColumns: profile.role === "Patient" ? "1fr auto 6.5rem" : "1fr auto", borderBottom: `1px solid ${COLORS.border}` }}
+                        >
+                          <span className="text-sm" style={{ color: COLORS.ink }}>{m.label}</span>
+                          <span className="text-xs text-right whitespace-nowrap" style={{ color: latest ? COLORS.ink : COLORS.inkSoft }}>
+                            {latest ? `${latest.value} · ${daysAgoLabel(latest.created_at)}` : "No data"}
+                          </span>
+                          {profile.role === "Patient" && (
+                            <input
+                              type="text"
+                              value={labDetailDrafts[m.key] || ""}
+                              onChange={(e) => setLabDetailDrafts({ ...labDetailDrafts, [m.key]: e.target.value })}
+                              placeholder="Add"
+                              className="w-full rounded-lg px-2 py-1.5 text-xs outline-none text-center"
+                              style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {profile.role === "Patient" && (
+                      <button
+                        onClick={() => saveLabDetailSection(section.id)}
+                        className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mt-4"
+                        style={{ background: COLORS.ink, color: "#fff" }}
+                      >
+                        {labDetailSaved === section.id ? <Check size={14} /> : <Plus size={14} />} {labDetailSaved === section.id ? "Saved" : "Save"}
+                      </button>
+                    )}
+                  </Card>
+                ))}
               </>
             )}
 
