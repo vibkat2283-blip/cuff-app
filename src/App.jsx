@@ -107,7 +107,7 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_sleep_hours", label: "Recommended sleep (hrs)", placeholder: "8", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
-    id: "workoutWeight", label: "Workout minutes", Icon: Dumbbell, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.elevated,
+    id: "workoutWeight", label: "Workout / Gym", Icon: Dumbbell, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.elevated,
     recommendedFields: [{ key: "recommended_workout_weight_minutes", label: "Recommended minutes/day", placeholder: "20", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
@@ -115,11 +115,11 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_workout_cardio_minutes", label: "Recommended minutes/day", placeholder: "30", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "heartRateMin", label: "Min heart rate", Icon: HeartPulse, unit: " bpm", dataKey: "min_bpm", decimals: 0, color: COLORS.activityPrimary,
+    id: "heartRateMin", label: "Heart Rate Min", Icon: HeartPulse, unit: " bpm", dataKey: "min_bpm", decimals: 0, color: COLORS.activityPrimary,
     recommendedFields: [{ key: "recommended_heart_rate_min", label: "Recommended min (bpm)", placeholder: "60", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "heartRateMax", label: "Max heart rate", Icon: HeartPulse, unit: " bpm", dataKey: "max_bpm", decimals: 0, color: COLORS.activityPrimary,
+    id: "heartRateMax", label: "Heart Rate Max", Icon: HeartPulse, unit: " bpm", dataKey: "max_bpm", decimals: 0, color: COLORS.activityPrimary,
     recommendedFields: [{ key: "recommended_heart_rate_max", label: "Recommended max (bpm)", placeholder: "100", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
@@ -1437,7 +1437,7 @@ export default function App() {
               style={{ background: COLORS.bg, borderBottom: `1px solid ${COLORS.border}` }}
             >
               {[
-                { id: "activity", label: "Activity" },
+                { id: "activity", label: "Daily Activity" },
                 { id: "sensors", label: "Connect Sensor" },
               ].map((t) => (
                 <button
@@ -1508,7 +1508,7 @@ export default function App() {
               onOpen={() => { setMetricDetailId("sleep"); setPage("metricDetail"); }}
             />
             <ActivitySection
-              Icon={Dumbbell} label="Workout minutes" dataKey="minutes" unit=" min" decimals={0}
+              Icon={Dumbbell} label="Workout / Gym" dataKey="minutes" unit=" min" decimals={0}
               latest={latestWorkoutWeight} prev={prevWorkoutWeight} data={workoutWeightEntries} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_workout_weight_minutes ?? 20}
               onOpen={() => { setMetricDetailId("workoutWeight"); setPage("metricDetail"); }}
@@ -1521,13 +1521,13 @@ export default function App() {
             />
 
             <ActivitySection
-              Icon={HeartPulse} label="Min heart rate" dataKey="min_bpm" unit=" bpm" decimals={0}
+              Icon={HeartPulse} label="Heart Rate Min" dataKey="min_bpm" unit=" bpm" decimals={0}
               latest={latestHeartRate} prev={prevHeartRate} data={heartRateReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_heart_rate_min ?? 60}
               onOpen={() => { setMetricDetailId("heartRateMin"); setPage("metricDetail"); }}
             />
             <ActivitySection
-              Icon={HeartPulse} label="Max heart rate" dataKey="max_bpm" unit=" bpm" decimals={0}
+              Icon={HeartPulse} label="Heart Rate Max" dataKey="max_bpm" unit=" bpm" decimals={0}
               latest={latestHeartRate} prev={prevHeartRate} data={heartRateReadings} color={COLORS.activityPrimary} iconColor={COLORS.activityPrimary} textColor={COLORS.activityPrimary}
               recommendedValue={activePatientProfile?.recommended_heart_rate_max ?? 100}
               onOpen={() => { setMetricDetailId("heartRateMax"); setPage("metricDetail"); }}
@@ -1561,12 +1561,12 @@ export default function App() {
                 </div>
 
                 <div className="mb-4">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Min Heart Rate (bpm)</label>
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Heart Rate Min (bpm)</label>
                   <input type="number" value={hrMinValue} onChange={(e) => setHrMinValue(e.target.value)} placeholder="58" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
                 <div className="mb-4">
-                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Max Heart Rate (bpm)</label>
+                  <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Heart Rate Max (bpm)</label>
                   <input type="number" value={hrMaxValue} onChange={(e) => setHrMaxValue(e.target.value)} placeholder="142" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
