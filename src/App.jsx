@@ -1065,8 +1065,8 @@ export default function App() {
           ) : (
             <>
               <div className="flex rounded-xl overflow-hidden mb-5" style={{ border: `1px solid ${COLORS.border}` }}>
-                <button onClick={() => setAuthMode("signin")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signin" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign in</button>
-                <button onClick={() => setAuthMode("signup")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signup" ? { background: COLORS.ink, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign up</button>
+                <button onClick={() => setAuthMode("signin")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signin" ? { background: COLORS.primary, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign in</button>
+                <button onClick={() => setAuthMode("signup")} className="flex-1 py-2 text-xs font-semibold" style={authMode === "signup" ? { background: COLORS.primary, color: "#fff" } : { background: COLORS.surfaceAlt, color: COLORS.inkSoft }}>Sign up</button>
               </div>
 
               {authMode === "signup" && (
@@ -1156,7 +1156,7 @@ export default function App() {
                 <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Log body weight (kg)</label>
                 <div className="flex items-center gap-2">
                   <input type="number" step="0.1" value={weightValue} onChange={(e) => setWeightValue(e.target.value)} placeholder="75" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
-                  <button onClick={addWeightReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                  <button onClick={addWeightReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.primary, color: "#fff" }}>
                     <Plus size={14} /> Save
                   </button>
                 </div>
@@ -1179,7 +1179,7 @@ export default function App() {
                       style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
                     />
                   </div>
-                  <button onClick={saveWeightTarget} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                  <button onClick={saveWeightTarget} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                     {recommendedSaved ? <Check size={14} /> : <Plus size={14} />} {recommendedSaved ? "Saved" : "Save target"}
                   </button>
                 </>
@@ -1283,7 +1283,7 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <button onClick={saveRecommended} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                  <button onClick={saveRecommended} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                     {recommendedSaved ? <Check size={14} /> : <Plus size={14} />} {recommendedSaved ? "Saved" : "Save target"}
                   </button>
                 </>
@@ -1563,7 +1563,7 @@ export default function App() {
                       Disconnect
                     </button>
                   ) : (
-                    <button onClick={connectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                    <button onClick={connectAppleHealth} className="text-xs font-medium px-3.5 py-2 rounded-xl flex-shrink-0" style={{ background: COLORS.primary, color: "#fff" }}>
                       Connect
                     </button>
                   )}
@@ -1688,7 +1688,7 @@ export default function App() {
                   className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
                   style={
                     labSubTab === t.id
-                      ? { background: COLORS.ink, color: "#fff" }
+                      ? { background: COLORS.primary, color: "#fff" }
                       : { background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
                   }
                 >
@@ -1773,7 +1773,7 @@ export default function App() {
                       <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Pulse</label>
                         <input type="number" value={pulse} onChange={(e) => setPulse(e.target.value)} placeholder="72" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
                     </div>
-                    <button onClick={addBpReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                    <button onClick={addBpReading} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                       <Plus size={14} /> Save blood pressure
                     </button>
                   </Card>
@@ -1793,7 +1793,7 @@ export default function App() {
                       <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
                         <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="5.6" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
                     </div>
-                    <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                    <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                       <Plus size={14} /> Save blood sugar
                     </button>
                   </Card>
@@ -1849,7 +1849,7 @@ export default function App() {
                       <button
                         onClick={() => saveLabDetailSection(section.id)}
                         className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mt-4"
-                        style={{ background: COLORS.ink, color: "#fff" }}
+                        style={{ background: COLORS.primary, color: "#fff" }}
                       >
                         {labDetailSaved === section.id ? <Check size={14} /> : <Plus size={14} />} {labDetailSaved === section.id ? "Saved" : "Save"}
                       </button>
@@ -1881,7 +1881,7 @@ export default function App() {
                       onClick={uploadLabReport}
                       disabled={!selectedFile || uploadingFile}
                       className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium"
-                      style={{ background: COLORS.ink, color: "#fff", opacity: !selectedFile || uploadingFile ? 0.5 : 1 }}
+                      style={{ background: COLORS.primary, color: "#fff", opacity: !selectedFile || uploadingFile ? 0.5 : 1 }}
                     >
                       <Plus size={14} /> {uploadingFile ? "Uploading..." : "Upload report"}
                     </button>
@@ -1950,7 +1950,7 @@ export default function App() {
                     className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
                     style={
                       doctorSubTab === t.id
-                        ? { background: COLORS.ink, color: "#fff" }
+                        ? { background: COLORS.primary, color: "#fff" }
                         : { background: COLORS.surfaceAlt, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
                     }
                   >
@@ -1978,7 +1978,7 @@ export default function App() {
                             style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
                             placeholder={section.id === "medicine" ? "Write medicine instructions for your patient..." : "Write supplement recommendations for your patient..."}
                           />
-                          <button onClick={() => savePrescription(section.id)} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.ink, color: "#fff" }}>
+                          <button onClick={() => savePrescription(section.id)} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium mb-5" style={{ background: COLORS.primary, color: "#fff" }}>
                             {prescriptionSaved === section.id ? <Check size={14} /> : <Plus size={14} />} {prescriptionSaved === section.id ? "Saved" : `Save ${section.label.toLowerCase()}`}
                           </button>
                         </>
@@ -2051,7 +2051,7 @@ export default function App() {
                       className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
                       style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
                     />
-                    <button onClick={sendMessage} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                    <button onClick={sendMessage} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium flex-shrink-0" style={{ background: COLORS.primary, color: "#fff" }}>
                       <Send size={14} /> Send
                     </button>
                   </div>
@@ -2101,7 +2101,7 @@ export default function App() {
                             <option value="60">60 min</option>
                           </select>
                         </div>
-                        <button onClick={addSlot} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                        <button onClick={addSlot} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                           <Plus size={14} /> Add slot
                         </button>
                       </div>
@@ -2169,7 +2169,7 @@ export default function App() {
                             {availableSlots.map((s) => (
                               <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
                                 <span className="text-sm" style={{ color: COLORS.ink }}>{formatDate(s.slot_start)}</span>
-                                <button onClick={() => bookSlot(s)} className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                                <button onClick={() => bookSlot(s)} className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: COLORS.primary, color: "#fff" }}>
                                   Book
                                 </button>
                               </div>
@@ -2237,7 +2237,7 @@ export default function App() {
                   className="text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex-shrink-0"
                   style={
                     profileSubTab === t.id
-                      ? { background: COLORS.ink, color: "#fff" }
+                      ? { background: COLORS.primary, color: "#fff" }
                       : { background: COLORS.surfaceAlt, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }
                   }
                 >
@@ -2360,7 +2360,7 @@ export default function App() {
                   <textarea value={personalDraft.food_allergies} onChange={(e) => setPersonalDraft({ ...personalDraft, food_allergies: e.target.value })} rows={2} placeholder="Peanuts, lactose, gluten, ..." className="w-full rounded-xl px-3.5 py-3 text-sm outline-none resize-none" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} />
                 </div>
 
-                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                <button onClick={savePersonal} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                   {personalSaved ? <Check size={14} /> : <Plus size={14} />} {personalSaved ? "Saved" : "Save"}
                 </button>
               </>
@@ -2394,7 +2394,7 @@ export default function App() {
                   />
                 </div>
 
-                <button onClick={saveMedicalBackground} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                <button onClick={saveMedicalBackground} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                   {medicalSaved ? <Check size={14} /> : <Plus size={14} />} {medicalSaved ? "Saved" : "Save"}
                 </button>
               </>
@@ -2428,7 +2428,7 @@ export default function App() {
                   />
                 </div>
 
-                <button onClick={saveFamilyHistory} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                <button onClick={saveFamilyHistory} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
                   {familySaved ? <Check size={14} /> : <Plus size={14} />} {familySaved ? "Saved" : "Save"}
                 </button>
               </>
