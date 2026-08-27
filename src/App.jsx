@@ -4,19 +4,19 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Refere
 import { supabase } from "./supabaseClient";
 
 const COLORS = {
-  ink: "#16231F",
-  inkSoft: "#4B5C55",
+  ink: "#6B2308",
+  inkSoft: "#A34F2E",
   primary: "#FF4500",
   primarySoft: "#FF7A45",
-  bg: "#F1F5F2",
+  bg: "#FFF4EF",
   surface: "#FFFFFF",
-  surfaceAlt: "#E9F1ED",
-  border: "#D8E4DE",
-  normal: "#2F6B5E",
-  elevated: "#C9932E",
-  high: "#C4562F",
-  crisis: "#A63A2C",
-  muted: "#C3CBC6",
+  surfaceAlt: "#FFE7DA",
+  border: "#FFCBAE",
+  normal: "#FFB68C",
+  elevated: "#FF8A4D",
+  high: "#E85A1A",
+  crisis: "#A83D0F",
+  muted: "#F6D6C2",
 };
 
 const SUGAR_TYPES = [
