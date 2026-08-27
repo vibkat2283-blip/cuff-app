@@ -402,6 +402,14 @@ export default function App() {
 
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [doctors, setDoctors] = useState([]);
+  const [selectedDoctorId, setSelectedDoctorId] = useState(null);
+  const [doctorSlots, setDoctorSlots] = useState([]);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [myAppointments, setMyAppointments] = useState([]);
+  const [slotDate, setSlotDate] = useState("");
+  const [slotTime, setSlotTime] = useState("");
+  const [slotDuration, setSlotDuration] = useState("30");
 
   const [bpReadings, setBpReadings] = useState([]);
   const [sugarReadings, setSugarReadings] = useState([]);
@@ -503,6 +511,37 @@ export default function App() {
       });
     }
   }, [profile]);
+
+  // Patients: load the doctor list, for booking appointments
+  useEffect(() => {
+    if (profile?.role === "Patient") {
+      supabase.from("profiles").select("*").eq("role", "Doctor").then(({ data }) => {
+        setDoctors(data || []);
+        if (data && data.length > 0 && !selectedDoctorId) setSelectedDoctorId(data[0].id);
+      });
+    }
+  }, [profile]);
+
+  // Doctors: load their own appointment slots (open + booked), independent of which patient is selected
+  useEffect(() => {
+    if (profile?.role !== "Doctor") return;
+    supabase.from("appointment_slots").select("*").eq("doctor_id", profile.id).order("slot_start", { ascending: true })
+      .then(({ data }) => setDoctorSlots(data || []));
+  }, [profile?.id, profile?.role]);
+
+  // Patients: load the selected doctor's open slots to browse
+  useEffect(() => {
+    if (profile?.role !== "Patient" || !selectedDoctorId) return;
+    supabase.from("appointment_slots").select("*").eq("doctor_id", selectedDoctorId).eq("status", "open")
+      .order("slot_start", { ascending: true }).then(({ data }) => setAvailableSlots(data || []));
+  }, [selectedDoctorId, profile?.role]);
+
+  // Patients: load their own booked appointments, across any doctor
+  useEffect(() => {
+    if (profile?.role !== "Patient") return;
+    supabase.from("appointment_slots").select("*").eq("patient_id", profile.id).order("slot_start", { ascending: true })
+      .then(({ data }) => setMyAppointments(data || []));
+  }, [profile?.id, profile?.role]);
 
   const activePatientId = profile?.role === "Doctor" ? selectedPatientId : profile?.id;
   const activePatientProfile = profile?.role === "Doctor" ? patients.find((p) => p.id === selectedPatientId) : profile;
@@ -795,6 +834,49 @@ export default function App() {
     if (data) setPrescriptions([data[0], ...prescriptions]);
     setPrescriptionSaved(true);
     setTimeout(() => setPrescriptionSaved(false), 1800);
+  };
+
+  const addSlot = async () => {
+    if (!slotDate || !slotTime) return;
+    const start = new Date(`${slotDate}T${slotTime}`);
+    if (Number.isNaN(start.getTime()) || start.getTime() <= Date.now()) return;
+    const end = new Date(start.getTime() + parseInt(slotDuration, 10) * 60000);
+    const { data } = await supabase.from("appointment_slots").insert({
+      doctor_id: profile.id, slot_start: start.toISOString(), slot_end: end.toISOString(), status: "open",
+    }).select();
+    if (data) {
+      setDoctorSlots([...doctorSlots, ...data].sort((a, b) => new Date(a.slot_start) - new Date(b.slot_start)));
+    }
+    setSlotDate("");
+    setSlotTime("");
+  };
+
+  const removeSlot = async (slotId) => {
+    await supabase.from("appointment_slots").delete().eq("id", slotId);
+    setDoctorSlots((prev) => prev.filter((s) => s.id !== slotId));
+  };
+
+  const bookSlot = async (slot) => {
+    const { data } = await supabase.from("appointment_slots")
+      .update({ patient_id: profile.id, status: "booked", booked_at: new Date().toISOString() })
+      .eq("id", slot.id).eq("status", "open").select();
+    setAvailableSlots((prev) => prev.filter((s) => s.id !== slot.id));
+    if (data && data.length > 0) {
+      setMyAppointments((prev) => [...prev, data[0]].sort((a, b) => new Date(a.slot_start) - new Date(b.slot_start)));
+    }
+  };
+
+  const cancelAppointment = async (slot) => {
+    const { data } = await supabase.from("appointment_slots")
+      .update({ patient_id: null, status: "open", booked_at: null })
+      .eq("id", slot.id).select();
+    if (!data || data.length === 0) return;
+    const updated = data[0];
+    setDoctorSlots((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    setMyAppointments((prev) => prev.filter((s) => s.id !== updated.id));
+    if (updated.doctor_id === selectedDoctorId) {
+      setAvailableSlots((prev) => [...prev, updated].sort((a, b) => new Date(a.slot_start) - new Date(b.slot_start)));
+    }
   };
 
   const sendMessage = async () => {
@@ -1855,6 +1937,7 @@ export default function App() {
                 {[
                   { id: "prescription", label: "Prescription" },
                   { id: "messages", label: "Messages" },
+                  { id: "appointments", label: "Appointments" },
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -1951,6 +2034,151 @@ export default function App() {
                       <Send size={14} /> Send
                     </button>
                   </div>
+                </>
+              )}
+
+              {doctorSubTab === "appointments" && (
+                <>
+                  {profile.role === "Doctor" ? (
+                    <>
+                      <div className="mb-5">
+                        <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.ink }}>Open a new slot</span>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Date</label>
+                            <input
+                              type="date"
+                              value={slotDate}
+                              min={new Date().toISOString().split("T")[0]}
+                              onChange={(e) => setSlotDate(e.target.value)}
+                              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                              style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Time</label>
+                            <input
+                              type="time"
+                              value={slotTime}
+                              onChange={(e) => setSlotTime(e.target.value)}
+                              className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                              style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                            />
+                          </div>
+                        </div>
+                        <div className="mb-3">
+                          <label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Duration</label>
+                          <select
+                            value={slotDuration}
+                            onChange={(e) => setSlotDuration(e.target.value)}
+                            className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+                            style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                          >
+                            <option value="15">15 min</option>
+                            <option value="30">30 min</option>
+                            <option value="45">45 min</option>
+                            <option value="60">60 min</option>
+                          </select>
+                        </div>
+                        <button onClick={addSlot} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.ink, color: "#fff" }}>
+                          <Plus size={14} /> Add slot
+                        </button>
+                      </div>
+
+                      <div className="mb-4">
+                        <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>YOUR UPCOMING APPOINTMENTS</span>
+                        {doctorSlots.filter((s) => s.status === "booked").length === 0 ? (
+                          <p className="text-sm" style={{ color: COLORS.inkSoft }}>No appointments booked yet.</p>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {doctorSlots.filter((s) => s.status === "booked").map((s) => (
+                              <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>{patients.find((p) => p.id === s.patient_id)?.name || "Patient"}</p>
+                                  <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(s.slot_start)}</span>
+                                </div>
+                                <button onClick={() => cancelAppointment(s)} className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                                  Cancel
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>YOUR OPEN SLOTS</span>
+                        {doctorSlots.filter((s) => s.status === "open" && new Date(s.slot_start) >= new Date()).length === 0 ? (
+                          <p className="text-sm" style={{ color: COLORS.inkSoft }}>No open slots yet.</p>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {doctorSlots.filter((s) => s.status === "open" && new Date(s.slot_start) >= new Date()).map((s) => (
+                              <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                                <span className="text-sm" style={{ color: COLORS.ink }}>{formatDate(s.slot_start)}</span>
+                                <button onClick={() => removeSlot(s.id)} className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-4">
+                        <label className="text-xs font-semibold block mb-2" style={{ color: COLORS.inkSoft }}>DOCTOR</label>
+                        <select
+                          value={selectedDoctorId || ""}
+                          onChange={(e) => setSelectedDoctorId(e.target.value)}
+                          className="w-full rounded-xl px-3.5 py-2.5 text-sm outline-none"
+                          style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }}
+                        >
+                          {doctors.length === 0 && <option>No doctors yet</option>}
+                          {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="mb-5">
+                        <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>AVAILABLE SLOTS</span>
+                        {availableSlots.length === 0 ? (
+                          <p className="text-sm" style={{ color: COLORS.inkSoft }}>No open slots right now.</p>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {availableSlots.map((s) => (
+                              <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                                <span className="text-sm" style={{ color: COLORS.ink }}>{formatDate(s.slot_start)}</span>
+                                <button onClick={() => bookSlot(s)} className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: COLORS.ink, color: "#fff" }}>
+                                  Book
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className="text-xs font-semibold tracking-wide block mb-2" style={{ color: COLORS.inkSoft }}>YOUR UPCOMING APPOINTMENTS</span>
+                        {myAppointments.length === 0 ? (
+                          <p className="text-sm" style={{ color: COLORS.inkSoft }}>No appointments booked yet.</p>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {myAppointments.map((s) => (
+                              <div key={s.id} className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>{doctors.find((d) => d.id === s.doctor_id)?.name || "Doctor"}</p>
+                                  <span className="text-xs" style={{ color: COLORS.inkSoft }}>{formatDate(s.slot_start)}</span>
+                                </div>
+                                <button onClick={() => cancelAppointment(s)} className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0" style={{ background: COLORS.surface, color: COLORS.inkSoft, border: `1px solid ${COLORS.border}` }}>
+                                  Cancel
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </Card>
