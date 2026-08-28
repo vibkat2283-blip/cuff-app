@@ -1702,77 +1702,82 @@ export default function App() {
                 <Card>
                   <div className="flex items-center gap-2 mb-4">
                     <Heart size={16} color={COLORS.primary} />
-                    <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Systolic pressure (top number)</span>
+                    <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col items-center justify-center">
-                      <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
-                      {latestBp ? (
-                        <>
-                          <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.primary }} className="text-4xl font-bold">
-                            {latestBp.systolic}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> mmHg</span>
-                          </div>
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
-                          <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
-                        </>
-                      ) : (
-                        <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
-                      )}
-                    </div>
-                    <div onClick={() => { setMetricDetailId("bloodPressure"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
-                      <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
-                      {bpReadings.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={110}>
-                          <BarChart data={bpReadings.slice(-5).map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                            <YAxis hide />
-                            <Bar dataKey="systolic" fill={COLORS.high} radius={[4, 4, 0, 0]} maxBarSize={20} />
-                            <ReferenceLine y={activePatientProfile?.recommended_bp_systolic ?? 120} stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex items-center justify-center" style={{ height: 110 }}>
-                          <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
 
-                <Card>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Heart size={16} color={COLORS.primary} />
-                    <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Diastolic pressure (bottom number)</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col items-center justify-center">
-                      <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
-                      {latestBp ? (
-                        <>
-                          <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.primary }} className="text-4xl font-bold">
-                            {latestBp.diastolic}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> mmHg</span>
+                  <div>
+                    <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Systolic pressure (top number)</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col items-center justify-center">
+                        <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
+                        {latestBp ? (
+                          <>
+                            <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.primary }} className="text-4xl font-bold">
+                              {latestBp.systolic}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> mmHg</span>
+                            </div>
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
+                            <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
+                        )}
+                      </div>
+                      <div onClick={() => { setMetricDetailId("bloodPressure"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+                        <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+                        {bpReadings.length > 0 ? (
+                          <HistoryBarChart
+                            data={bpReadings.slice(-5)}
+                            dataKey="systolic"
+                            colorForEntry={(entry, i, arr) => (i === arr.length - 1 ? COLORS.primary : COLORS.muted)}
+                            height={110}
+                            showAxis={false}
+                            maxBarSize={20}
+                            referenceValue={activePatientProfile?.recommended_bp_systolic ?? 120}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center" style={{ height: 110 }}>
+                            <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
                           </div>
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
-                          <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
-                        </>
-                      ) : (
-                        <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
-                      )}
+                        )}
+                      </div>
                     </div>
-                    <div onClick={() => { setMetricDetailId("bloodPressure"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
-                      <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
-                      {bpReadings.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={110}>
-                          <BarChart data={bpReadings.slice(-5).map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                            <YAxis hide />
-                            <Bar dataKey="diastolic" fill={COLORS.normal} radius={[4, 4, 0, 0]} maxBarSize={20} />
-                            <ReferenceLine y={activePatientProfile?.recommended_bp_diastolic ?? 80} stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="flex items-center justify-center" style={{ height: 110 }}>
-                          <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
-                        </div>
-                      )}
+                  </div>
+
+                  <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                    <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Diastolic pressure (bottom number)</span>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col items-center justify-center">
+                        <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
+                        {latestBp ? (
+                          <>
+                            <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.primary }} className="text-4xl font-bold">
+                              {latestBp.diastolic}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> mmHg</span>
+                            </div>
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
+                            <span className="text-xs mt-2 text-center" style={{ color: COLORS.inkSoft }}>{formatDate(latestBp.created_at)} · {daysAgoLabel(latestBp.created_at)}</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
+                        )}
+                      </div>
+                      <div onClick={() => { setMetricDetailId("bloodPressure"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+                        <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
+                        {bpReadings.length > 0 ? (
+                          <HistoryBarChart
+                            data={bpReadings.slice(-5)}
+                            dataKey="diastolic"
+                            colorForEntry={(entry, i, arr) => (i === arr.length - 1 ? COLORS.primary : COLORS.muted)}
+                            height={110}
+                            showAxis={false}
+                            maxBarSize={20}
+                            referenceValue={activePatientProfile?.recommended_bp_diastolic ?? 80}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center" style={{ height: 110 }}>
+                            <span className="text-xs" style={{ color: COLORS.inkSoft }}>No data</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Card>
