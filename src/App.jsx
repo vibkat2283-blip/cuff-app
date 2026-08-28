@@ -22,7 +22,7 @@ const COLORS = {
 const SUGAR_TYPES = [
   { id: "fasting", label: "Fasting", unit: "mg/dL", min: 70, max: 220, breaks: [100, 126] },
   { id: "nonfasting", label: "Non-fasting", unit: "mg/dL", min: 70, max: 260, breaks: [140, 200] },
-  { id: "a1c", label: "A1C", unit: "%", min: 4, max: 9, breaks: [5.7, 6.5] },
+  { id: "a1c", label: "HbA1c", unit: "%", min: 4, max: 9, breaks: [5.7, 6.5] },
 ];
 
 function categorizeBP(sys, dia) {
@@ -130,8 +130,8 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_sugar_nonfasting", label: "Recommended non-fasting sugar (mg/dL)", placeholder: "120", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "a1c", label: "A1C", Icon: Droplet, unit: "%", dataKey: "value", decimals: 1, color: COLORS.primarySoft,
-    recommendedFields: [{ key: "recommended_sugar_a1c", label: "Recommended A1C (%)", placeholder: "5.6", parse: (v) => (v === "" ? null : parseFloat(v)) }],
+    id: "a1c", label: "HbA1c", Icon: Droplet, unit: "%", dataKey: "value", decimals: 1, color: COLORS.primarySoft,
+    recommendedFields: [{ key: "recommended_sugar_a1c", label: "Recommended HbA1c (%)", placeholder: "5.6", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
     id: "bloodPressure", label: "Blood pressure", Icon: Heart, unit: " mmHg", dataKey: null, decimals: 0, color: null,
@@ -305,12 +305,12 @@ function AtAGlanceTile({ Icon, label, value, dotColor, onClick }) {
   );
 }
 
-function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, data, color, iconColor = COLORS.primary, textColor = COLORS.ink, recommendedValue, onOpen }) {
-  return (
-    <Card>
+function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, data, color, iconColor = COLORS.primary, textColor = COLORS.ink, recommendedValue, onOpen, bare = false }) {
+  const content = (
+    <>
       <div className="flex items-center gap-2 mb-4">
         <Icon size={16} color={iconColor} />
-        <span className="text-lg font-semibold" style={{ color: textColor, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
+        <span className={bare ? "text-sm font-semibold" : "text-lg font-semibold"} style={{ color: textColor, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col items-center justify-center">
@@ -357,8 +357,9 @@ function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, d
           )}
         </div>
       </div>
-    </Card>
+    </>
   );
+  return bare ? content : <Card>{content}</Card>;
 }
 
 
@@ -1782,27 +1783,43 @@ export default function App() {
                   </div>
                 </Card>
 
-                <ActivitySection
-                  Icon={Droplet} label="Fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
-                  latest={latestFasting} prev={prevFasting} data={fastingEntries} color={COLORS.normal}
-                  textColor={COLORS.primary}
-                  recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? 90}
-                  onOpen={() => { setMetricDetailId("fastingSugar"); setPage("metricDetail"); }}
-                />
-                <ActivitySection
-                  Icon={Droplet} label="Non-fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
-                  latest={latestNonFasting} prev={prevNonFasting} data={nonFastingEntries} color={COLORS.elevated}
-                  textColor={COLORS.primary}
-                  recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? 120}
-                  onOpen={() => { setMetricDetailId("nonFastingSugar"); setPage("metricDetail"); }}
-                />
-                <ActivitySection
-                  Icon={Droplet} label="A1C" dataKey="value" unit="%" decimals={1}
-                  latest={latestA1c} prev={prevA1c} data={a1cEntries} color={COLORS.primarySoft}
-                  textColor={COLORS.primary}
-                  recommendedValue={activePatientProfile?.recommended_sugar_a1c ?? 5.6}
-                  onOpen={() => { setMetricDetailId("a1c"); setPage("metricDetail"); }}
-                />
+                <Card>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Droplet size={16} color={COLORS.primary} />
+                    <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Blood sugar</span>
+                  </div>
+
+                  <ActivitySection
+                    bare
+                    Icon={Droplet} label="Fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
+                    latest={latestFasting} prev={prevFasting} data={fastingEntries} color={COLORS.primary}
+                    textColor={COLORS.primary}
+                    recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? 90}
+                    onOpen={() => { setMetricDetailId("fastingSugar"); setPage("metricDetail"); }}
+                  />
+
+                  <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                    <ActivitySection
+                      bare
+                      Icon={Droplet} label="Non-fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
+                      latest={latestNonFasting} prev={prevNonFasting} data={nonFastingEntries} color={COLORS.primary}
+                      textColor={COLORS.primary}
+                      recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? 120}
+                      onOpen={() => { setMetricDetailId("nonFastingSugar"); setPage("metricDetail"); }}
+                    />
+                  </div>
+
+                  <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                    <ActivitySection
+                      bare
+                      Icon={Droplet} label="HbA1c" dataKey="value" unit="%" decimals={1}
+                      latest={latestA1c} prev={prevA1c} data={a1cEntries} color={COLORS.primary}
+                      textColor={COLORS.primary}
+                      recommendedValue={activePatientProfile?.recommended_sugar_a1c ?? 5.6}
+                      onOpen={() => { setMetricDetailId("a1c"); setPage("metricDetail"); }}
+                    />
+                  </div>
+                </Card>
 
                 {profile.role === "Patient" && (
                   <Card>
@@ -1835,7 +1852,7 @@ export default function App() {
                         <input type="number" value={fastingValue} onChange={(e) => setFastingValue(e.target.value)} placeholder="95" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
                       <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Non-fasting</label>
                         <input type="number" value={nonFastingValue} onChange={(e) => setNonFastingValue(e.target.value)} placeholder="130" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
-                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>A1C (%)</label>
+                      <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>HbA1c (%)</label>
                         <input type="number" step="0.1" value={a1cValue} onChange={(e) => setA1cValue(e.target.value)} placeholder="5.6" className="w-full rounded-xl px-3 py-2.5 text-sm outline-none text-center" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}`, color: COLORS.ink }} /></div>
                     </div>
                     <button onClick={addSugarReadings} className="flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-xl font-medium" style={{ background: COLORS.primary, color: "#fff" }}>
