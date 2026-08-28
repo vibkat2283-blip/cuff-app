@@ -1866,7 +1866,7 @@ export default function App() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <FileText size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Lab reports</span>
+                  <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Lab reports</span>
                 </div>
 
                 {profile.role === "Patient" && (
@@ -1935,7 +1935,7 @@ export default function App() {
             <Card>
               <div className="flex items-center gap-2 mb-4">
                 <Stethoscope size={16} color={COLORS.primary} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Doctor</span>
+                <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Doctor</span>
               </div>
 
               <div
@@ -1969,7 +1969,7 @@ export default function App() {
                     { id: "supplement", label: "Supplements", current: supplementPrescriptions[0], past: supplementPrescriptions.slice(1) },
                   ].map((section, i) => (
                     <div key={section.id} className={i > 0 ? "mt-6 pt-6" : ""} style={i > 0 ? { borderTop: `1px solid ${COLORS.border}` } : undefined}>
-                      <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.ink }}>{section.label}</span>
+                      <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>{section.label}</span>
 
                       {profile.role === "Doctor" && (
                         <>
