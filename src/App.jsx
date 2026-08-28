@@ -1362,7 +1362,7 @@ export default function App() {
             <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
               <Heart size={16} color="#fff" fill="#ffffff33" />
             </div>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-xl">Cuff</span>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.primary }} className="text-xl">Cuff</span>
           </div>
           <button
             onClick={handleBellClick}
@@ -1392,7 +1392,7 @@ export default function App() {
             <Card>
               <div className="flex items-center gap-2 mb-4">
                 <Activity size={16} color={COLORS.primary} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>At-a-glance</span>
+                <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>At-a-glance</span>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 <AtAGlanceTile
@@ -1447,7 +1447,7 @@ export default function App() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <Plus size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Quick log</span>
+                  <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Quick log</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <button onClick={() => setActiveTab("lab")} className="flex flex-col items-center gap-1.5 py-3 rounded-xl" style={{ background: COLORS.surfaceAlt, border: `1px solid ${COLORS.border}` }}>
@@ -1470,12 +1470,12 @@ export default function App() {
               <Card>
                 <div className="flex items-center gap-2 mb-4">
                   <Scale size={16} color={COLORS.primary} />
-                  <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Body weight</span>
+                  <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Body weight</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col items-center justify-center">
                     <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
-                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.primary }} className="text-4xl font-bold">
                       {latestWeight.value}<span className="text-base" style={{ color: COLORS.inkSoft, fontWeight: 500 }}> {latestWeight.unit}</span>
                     </div>
                     {prevWeight && (
@@ -1702,14 +1702,14 @@ export default function App() {
                 <Card>
                   <div className="flex items-center gap-2 mb-4">
                     <Heart size={16} color={COLORS.primary} />
-                    <span className="text-lg font-semibold" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
+                    <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col items-center justify-center">
                       <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
                       {latestBp ? (
                         <>
-                          <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.ink }} className="text-4xl font-bold">
+                          <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: COLORS.primary }} className="text-4xl font-bold">
                             {latestBp.systolic}<span style={{ color: COLORS.inkSoft, fontWeight: 500 }}>/{latestBp.diastolic}</span>
                           </div>
                           <span className="text-xs font-semibold px-2.5 py-1 rounded-full mt-2" style={{ background: latestBpZone.color + "1a", color: latestBpZone.color }}>{latestBpZone.label}</span>
@@ -1743,18 +1743,21 @@ export default function App() {
                 <ActivitySection
                   Icon={Droplet} label="Fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
                   latest={latestFasting} prev={prevFasting} data={fastingEntries} color={COLORS.normal}
+                  textColor={COLORS.primary}
                   recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? 90}
                   onOpen={() => { setMetricDetailId("fastingSugar"); setPage("metricDetail"); }}
                 />
                 <ActivitySection
                   Icon={Droplet} label="Non-fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
                   latest={latestNonFasting} prev={prevNonFasting} data={nonFastingEntries} color={COLORS.elevated}
+                  textColor={COLORS.primary}
                   recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? 120}
                   onOpen={() => { setMetricDetailId("nonFastingSugar"); setPage("metricDetail"); }}
                 />
                 <ActivitySection
                   Icon={Droplet} label="A1C" dataKey="value" unit="%" decimals={1}
                   latest={latestA1c} prev={prevA1c} data={a1cEntries} color={COLORS.primarySoft}
+                  textColor={COLORS.primary}
                   recommendedValue={activePatientProfile?.recommended_sugar_a1c ?? 5.6}
                   onOpen={() => { setMetricDetailId("a1c"); setPage("metricDetail"); }}
                 />
@@ -1763,7 +1766,7 @@ export default function App() {
                   <Card>
                     <div className="flex items-center gap-2 mb-4">
                       <Activity size={16} color={COLORS.primary} />
-                      <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood pressure</span>
+                      <span className="text-sm font-semibold" style={{ color: COLORS.primary }}>Log blood pressure</span>
                     </div>
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Systolic</label>
@@ -1783,7 +1786,7 @@ export default function App() {
                   <Card>
                     <div className="flex items-center gap-2 mb-4">
                       <Droplet size={16} color={COLORS.primary} />
-                      <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>Log blood sugar</span>
+                      <span className="text-sm font-semibold" style={{ color: COLORS.primary }}>Log blood sugar</span>
                     </div>
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Fasting</label>
