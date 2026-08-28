@@ -1808,7 +1808,7 @@ export default function App() {
               <>
                 {LAB_DETAIL_SECTIONS.map((section) => (
                   <Card key={section.id}>
-                    <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{section.label}</span>
+                    <span className="text-lg font-semibold block mb-3" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>{section.label}</span>
 
                     <div
                       className={profile.role === "Patient" ? "grid gap-2 pb-1.5" : "grid gap-2 pb-1.5"}
