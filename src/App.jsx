@@ -775,11 +775,14 @@ export default function App() {
       .filter((m) => labDetailDrafts[m.key]?.trim())
       .map((m) => ({ patient_id: activePatientId, metric_key: m.key, value: labDetailDrafts[m.key].trim() }));
     if (rows.length === 0) return;
-    const { data } = await supabase.from("lab_metric_readings").insert(rows).select();
-    if (data) {
-      setLabMetricReadings([...labMetricReadings, ...data]);
-      setLabDetailDrafts({ ...labDetailDrafts, ...Object.fromEntries(section.metrics.map((m) => [m.key, ""])) });
+    const { data, error } = await supabase.from("lab_metric_readings").insert(rows).select();
+    if (error) {
+      console.error("Failed to save lab metric reading:", error);
+      alert(`Couldn't save: ${error.message}`);
+      return;
     }
+    setLabMetricReadings([...labMetricReadings, ...data]);
+    setLabDetailDrafts({ ...labDetailDrafts, ...Object.fromEntries(section.metrics.map((m) => [m.key, ""])) });
     setLabDetailSaved(sectionId);
     setTimeout(() => setLabDetailSaved(null), 1800);
   };
