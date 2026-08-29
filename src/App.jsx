@@ -1545,6 +1545,14 @@ export default function App() {
 
             {activitySubTab === "sensors" && (
               <Card>
+                <div className="rounded-2xl p-4 mb-4 flex items-start gap-3" style={{ background: COLORS.elevated + "14", border: `1px solid ${COLORS.elevated}` }}>
+                  <AlertTriangle size={18} color={COLORS.elevated} className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-sm font-semibold block" style={{ color: COLORS.elevated }}>Coming soon</span>
+                    <span className="text-xs block mt-0.5" style={{ color: COLORS.inkSoft }}>Sensor syncing isn't built yet — connecting below won't pull in any data.</span>
+                  </div>
+                </div>
+
                 <div className="rounded-2xl p-4 mb-4 flex items-center gap-3.5" style={{ background: COLORS.surfaceAlt }}>
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}` }}>
                     <Apple size={20} color={COLORS.ink} />
