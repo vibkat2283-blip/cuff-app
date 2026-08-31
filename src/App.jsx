@@ -106,11 +106,11 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_sleep_hours", label: "Recommended sleep (hrs)", placeholder: "8", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
-    id: "workoutWeight", label: "Workout / Gym", Icon: Dumbbell, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.elevated,
+    id: "workoutWeight", label: "Workout / Gym", Icon: Dumbbell, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_workout_weight_minutes", label: "Recommended minutes/day", placeholder: "20", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "workoutCardio", label: "Cardio / Walk", Icon: Footprints, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.normal,
+    id: "workoutCardio", label: "Cardio / Walk", Icon: Footprints, unit: " min", dataKey: "minutes", decimals: 0, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_workout_cardio_minutes", label: "Recommended minutes/day", placeholder: "30", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
@@ -122,15 +122,15 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_heart_rate_max", label: "Recommended max (bpm)", placeholder: "100", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "fastingSugar", label: "Fasting sugar", Icon: Droplet, unit: " mg/dL", dataKey: "value", decimals: 0, color: COLORS.normal,
+    id: "fastingSugar", label: "Fasting sugar", Icon: Droplet, unit: " mg/dL", dataKey: "value", decimals: 0, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_sugar_fasting", label: "Recommended fasting sugar (mg/dL)", placeholder: "90", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "nonFastingSugar", label: "Non-fasting sugar", Icon: Droplet, unit: " mg/dL", dataKey: "value", decimals: 0, color: COLORS.elevated,
+    id: "nonFastingSugar", label: "Non-fasting sugar", Icon: Droplet, unit: " mg/dL", dataKey: "value", decimals: 0, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_sugar_nonfasting", label: "Recommended non-fasting sugar (mg/dL)", placeholder: "120", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "a1c", label: "HbA1c", Icon: Droplet, unit: "%", dataKey: "value", decimals: 1, color: COLORS.primarySoft,
+    id: "a1c", label: "HbA1c", Icon: Droplet, unit: "%", dataKey: "value", decimals: 1, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_sugar_a1c", label: "Recommended HbA1c (%)", placeholder: "5.6", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
