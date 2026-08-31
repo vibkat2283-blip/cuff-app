@@ -1738,7 +1738,7 @@ export default function App() {
                   </div>
 
                   <div>
-                    <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Systolic pressure (top number)</span>
+                    <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Systolic (top number)</span>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col items-center justify-center">
                         <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
@@ -1776,7 +1776,7 @@ export default function App() {
                   </div>
 
                   <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
-                    <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Diastolic pressure (bottom number)</span>
+                    <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Diastolic (bottom number)</span>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col items-center justify-center">
                         <span className="text-xs font-semibold mb-2" style={{ color: COLORS.inkSoft }}>MOST RECENT</span>
@@ -1822,7 +1822,7 @@ export default function App() {
 
                   <ActivitySection
                     bare
-                    Icon={Droplet} label="Fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
+                    Icon={Droplet} label="Fasting" dataKey="value" unit=" mg/dL" decimals={0}
                     latest={latestFasting} prev={prevFasting} data={fastingEntries} color={COLORS.primary}
                     textColor={COLORS.primary}
                     recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? 90}
@@ -1832,7 +1832,7 @@ export default function App() {
                   <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
                     <ActivitySection
                       bare
-                      Icon={Droplet} label="Non-fasting sugar" dataKey="value" unit=" mg/dL" decimals={0}
+                      Icon={Droplet} label="Non-fasting" dataKey="value" unit=" mg/dL" decimals={0}
                       latest={latestNonFasting} prev={prevNonFasting} data={nonFastingEntries} color={COLORS.primary}
                       textColor={COLORS.primary}
                       recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? 120}
