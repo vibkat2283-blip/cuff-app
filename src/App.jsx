@@ -309,7 +309,7 @@ function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, d
   const content = (
     <>
       <div className="flex items-center gap-2 mb-4">
-        <Icon size={16} color={iconColor} />
+        {Icon && <Icon size={16} color={iconColor} />}
         <span className={bare ? "text-sm font-semibold" : "text-lg font-semibold"} style={{ color: textColor, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -1822,7 +1822,7 @@ export default function App() {
 
                   <ActivitySection
                     bare
-                    Icon={Droplet} label="Fasting" dataKey="value" unit=" mg/dL" decimals={0}
+                    label="Fasting" dataKey="value" unit=" mg/dL" decimals={0}
                     latest={latestFasting} prev={prevFasting} data={fastingEntries} color={COLORS.primary}
                     textColor={COLORS.primary}
                     recommendedValue={activePatientProfile?.recommended_sugar_fasting ?? 90}
@@ -1832,7 +1832,7 @@ export default function App() {
                   <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
                     <ActivitySection
                       bare
-                      Icon={Droplet} label="Non-fasting" dataKey="value" unit=" mg/dL" decimals={0}
+                      label="Non-fasting" dataKey="value" unit=" mg/dL" decimals={0}
                       latest={latestNonFasting} prev={prevNonFasting} data={nonFastingEntries} color={COLORS.primary}
                       textColor={COLORS.primary}
                       recommendedValue={activePatientProfile?.recommended_sugar_nonfasting ?? 120}
@@ -1843,7 +1843,7 @@ export default function App() {
                   <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
                     <ActivitySection
                       bare
-                      Icon={Droplet} label="HbA1c" dataKey="value" unit="%" decimals={1}
+                      label="HbA1c" dataKey="value" unit="%" decimals={1}
                       latest={latestA1c} prev={prevA1c} data={a1cEntries} color={COLORS.primary}
                       textColor={COLORS.primary}
                       recommendedValue={activePatientProfile?.recommended_sugar_a1c ?? 5.6}
