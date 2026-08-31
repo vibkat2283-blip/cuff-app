@@ -1398,7 +1398,7 @@ export default function App() {
                 <Activity size={16} color={COLORS.primary} />
                 <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>At-a-glance</span>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 gap-2 mb-2">
                 <AtAGlanceTile
                   Icon={Heart}
                   label="BP"
@@ -1420,11 +1420,27 @@ export default function App() {
                   dotColor={latestWeight ? COLORS.normal : COLORS.muted}
                   onClick={() => setPage("weightHistory")}
                 />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
                 <AtAGlanceTile
                   Icon={HeartPulse}
                   label="Heart rate"
                   value={latestHeartRate ? `${latestHeartRate.min_bpm}–${latestHeartRate.max_bpm}` : "—"}
                   dotColor={heartRateZoneColor}
+                  onClick={() => setActiveTab("activity")}
+                />
+                <AtAGlanceTile
+                  Icon={Footprints}
+                  label="Steps"
+                  value={latestSteps ? `${latestSteps.value}` : "—"}
+                  dotColor={latestSteps ? COLORS.normal : COLORS.muted}
+                  onClick={() => setActiveTab("activity")}
+                />
+                <AtAGlanceTile
+                  Icon={Dumbbell}
+                  label="Workout mins"
+                  value={latestWorkoutWeight ? `${latestWorkoutWeight.minutes}` : "—"}
+                  dotColor={latestWorkoutWeight ? COLORS.normal : COLORS.muted}
                   onClick={() => setActiveTab("activity")}
                 />
               </div>
