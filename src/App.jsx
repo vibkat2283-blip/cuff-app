@@ -1221,7 +1221,7 @@ export default function App() {
           </button>
           <Card>
             <div className="flex items-center gap-2 mb-4">
-              <metric.Icon size={16} color={COLORS.primary} />
+              {metric.Icon && <metric.Icon size={16} color={COLORS.primary} />}
               <span className="text-lg font-semibold" style={{ color: ACTIVITY_METRIC_IDS.includes(metricDetailId) ? COLORS.primary : COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
             </div>
 
