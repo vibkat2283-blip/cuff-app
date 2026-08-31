@@ -337,7 +337,7 @@ function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, d
             <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
           )}
         </div>
-        <div onClick={onOpen} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+        <div className="rounded-xl">
           <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
           {data.length > 0 ? (
             <HistoryBarChart
@@ -359,7 +359,11 @@ function ActivitySection({ Icon, label, latest, prev, dataKey, unit, decimals, d
       </div>
     </>
   );
-  return bare ? content : <Card>{content}</Card>;
+  return (
+    <div onClick={onOpen} className="cursor-pointer transition-transform active:scale-[0.99]">
+      {bare ? content : <Card>{content}</Card>}
+    </div>
+  );
 }
 
 
