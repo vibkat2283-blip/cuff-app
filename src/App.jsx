@@ -134,11 +134,12 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_sugar_a1c", label: "Recommended HbA1c (%)", placeholder: "5.6", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
-    id: "bloodPressure", label: "Blood pressure", Icon: Heart, unit: " mmHg", dataKey: null, decimals: 0, color: null,
-    recommendedFields: [
-      { key: "recommended_bp_systolic", label: "Recommended systolic (mmHg)", placeholder: "120", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
-      { key: "recommended_bp_diastolic", label: "Recommended diastolic (mmHg)", placeholder: "80", parse: (v) => (v === "" ? null : parseInt(v, 10)) },
-    ],
+    id: "bpSystolic", label: "Systolic pressure", Icon: Heart, unit: " mmHg", dataKey: "systolic", decimals: 0, color: COLORS.high,
+    recommendedFields: [{ key: "recommended_bp_systolic", label: "Recommended systolic (mmHg)", placeholder: "120", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
+  },
+  {
+    id: "bpDiastolic", label: "Diastolic pressure", Icon: Heart, unit: " mmHg", dataKey: "diastolic", decimals: 0, color: COLORS.normal,
+    recommendedFields: [{ key: "recommended_bp_diastolic", label: "Recommended diastolic (mmHg)", placeholder: "80", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
 ];
 
@@ -976,6 +977,8 @@ export default function App() {
     fastingSugar: { data: fastingEntries, latest: latestFasting, prev: prevFasting },
     nonFastingSugar: { data: nonFastingEntries, latest: latestNonFasting, prev: prevNonFasting },
     a1c: { data: a1cEntries, latest: latestA1c, prev: prevA1c },
+    bpSystolic: { data: bpReadings, latest: latestBp, prev: prevBp },
+    bpDiastolic: { data: bpReadings, latest: latestBp, prev: prevBp },
   };
 
   const outOfRangeAlerts = [];
@@ -1225,35 +1228,7 @@ export default function App() {
               <span className="text-lg font-semibold" style={{ color: ACTIVITY_METRIC_IDS.includes(metricDetailId) ? COLORS.primary : COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
             </div>
 
-            {metricDetailId === "bloodPressure" ? (
-              bpReadings.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={bpReadings.map((r) => ({ ...r, _label: shortDate(r.created_at) }))} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-                    <XAxis dataKey="_label" tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip
-                      cursor={{ fill: COLORS.surfaceAlt }}
-                      contentStyle={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, fontSize: 12 }}
-                      labelStyle={{ color: COLORS.ink, fontWeight: 600 }}
-                    />
-                    <Bar dataKey="systolic" name="Systolic" fill={COLORS.high} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    <Bar dataKey="diastolic" name="Diastolic" fill={COLORS.normal} radius={[6, 6, 0, 0]} maxBarSize={18} />
-                    <ReferenceLine
-                      y={activePatientProfile?.recommended_bp_systolic ?? 120}
-                      stroke={COLORS.high} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
-                      label={{ value: activePatientProfile?.recommended_bp_systolic != null ? `Target systolic: ${activePatientProfile.recommended_bp_systolic}` : "Suggested systolic: 120", position: "insideTopRight", fontSize: 10, fill: COLORS.inkSoft }}
-                    />
-                    <ReferenceLine
-                      y={activePatientProfile?.recommended_bp_diastolic ?? 80}
-                      stroke={COLORS.normal} strokeDasharray="4 4" strokeWidth={1} strokeOpacity={0.45}
-                      label={{ value: activePatientProfile?.recommended_bp_diastolic != null ? `Target diastolic: ${activePatientProfile.recommended_bp_diastolic}` : "Suggested diastolic: 80", position: "insideBottomRight", fontSize: 10, fill: COLORS.inkSoft }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm" style={{ color: COLORS.inkSoft }}>No blood pressure readings yet.</p>
-              )
-            ) : runtime.data.length > 0 ? (
+            {runtime.data.length > 0 ? (
               <HistoryBarChart
                 data={runtime.data}
                 dataKey={metric.dataKey}
@@ -1737,7 +1712,10 @@ export default function App() {
                     <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Blood pressure</span>
                   </div>
 
-                  <div>
+                  <div
+                    onClick={() => { setMetricDetailId("bpSystolic"); setPage("metricDetail"); }}
+                    className="cursor-pointer transition-transform active:scale-[0.99]"
+                  >
                     <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Systolic (top number)</span>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col items-center justify-center">
@@ -1754,7 +1732,7 @@ export default function App() {
                           <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
                         )}
                       </div>
-                      <div onClick={() => { setMetricDetailId("bloodPressure"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+                      <div>
                         <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
                         {bpReadings.length > 0 ? (
                           <HistoryBarChart
@@ -1775,7 +1753,11 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.border}` }}>
+                  <div
+                    onClick={() => { setMetricDetailId("bpDiastolic"); setPage("metricDetail"); }}
+                    className="mt-6 pt-6 cursor-pointer transition-transform active:scale-[0.99]"
+                    style={{ borderTop: `1px solid ${COLORS.border}` }}
+                  >
                     <span className="text-sm font-semibold block mb-3" style={{ color: COLORS.primary }}>Diastolic (bottom number)</span>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col items-center justify-center">
@@ -1792,7 +1774,7 @@ export default function App() {
                           <span className="text-xs text-center" style={{ color: COLORS.inkSoft }}>No data yet</span>
                         )}
                       </div>
-                      <div onClick={() => { setMetricDetailId("bloodPressure"); setPage("metricDetail"); }} className="cursor-pointer rounded-xl transition-transform active:scale-[0.98]">
+                      <div>
                         <span className="text-xs font-semibold block mb-1 text-center" style={{ color: COLORS.inkSoft }}>LAST 5 · TAP FOR MORE</span>
                         {bpReadings.length > 0 ? (
                           <HistoryBarChart
