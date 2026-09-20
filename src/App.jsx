@@ -134,11 +134,11 @@ const METRIC_DEFS = [
     recommendedFields: [{ key: "recommended_sugar_a1c", label: "Recommended HbA1c (%)", placeholder: "5.6", parse: (v) => (v === "" ? null : parseFloat(v)) }],
   },
   {
-    id: "bpSystolic", label: "Systolic pressure", Icon: Heart, unit: " mmHg", dataKey: "systolic", decimals: 0, color: COLORS.high,
+    id: "bpSystolic", label: "Systolic pressure", Icon: Heart, unit: " mmHg", dataKey: "systolic", decimals: 0, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_bp_systolic", label: "Recommended systolic (mmHg)", placeholder: "120", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
   {
-    id: "bpDiastolic", label: "Diastolic pressure", Icon: Heart, unit: " mmHg", dataKey: "diastolic", decimals: 0, color: COLORS.normal,
+    id: "bpDiastolic", label: "Diastolic pressure", Icon: Heart, unit: " mmHg", dataKey: "diastolic", decimals: 0, color: COLORS.primary,
     recommendedFields: [{ key: "recommended_bp_diastolic", label: "Recommended diastolic (mmHg)", placeholder: "80", parse: (v) => (v === "" ? null : parseInt(v, 10)) }],
   },
 ];
