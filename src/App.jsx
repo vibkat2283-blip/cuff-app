@@ -1838,7 +1838,7 @@ export default function App() {
                   <Card>
                     <div className="flex items-center gap-2 mb-4">
                       <Activity size={16} color={COLORS.primary} />
-                      <span className="text-sm font-semibold" style={{ color: COLORS.primary }}>Log blood pressure</span>
+                      <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Log blood pressure</span>
                     </div>
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Systolic</label>
@@ -1858,7 +1858,7 @@ export default function App() {
                   <Card>
                     <div className="flex items-center gap-2 mb-4">
                       <Droplet size={16} color={COLORS.primary} />
-                      <span className="text-sm font-semibold" style={{ color: COLORS.primary }}>Log blood sugar</span>
+                      <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>Log blood sugar</span>
                     </div>
                     <div className="grid grid-cols-3 gap-3 mb-4">
                       <div><label className="text-xs block mb-1.5" style={{ color: COLORS.inkSoft }}>Fasting</label>
