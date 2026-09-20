@@ -1036,7 +1036,7 @@ export default function App() {
             <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
               <Heart size={24} color="#fff" fill="#ffffff33" />
             </div>
-            <h1 style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, color: COLORS.ink }} className="text-3xl">prevology</h1>
+            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-3xl">prevology</h1>
             <p className="text-sm mt-2 text-center" style={{ color: COLORS.inkSoft }}>Log your readings. Share them with your doctor.</p>
           </div>
 
@@ -1343,7 +1343,7 @@ export default function App() {
             <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
               <Heart size={16} color="#fff" fill="#ffffff33" />
             </div>
-            <span style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, color: COLORS.primary }} className="text-xl">prevology</span>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.primary }} className="text-xl">prevology</span>
           </div>
           <button
             onClick={handleBellClick}
