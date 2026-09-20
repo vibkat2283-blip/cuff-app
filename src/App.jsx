@@ -143,8 +143,6 @@ const METRIC_DEFS = [
   },
 ];
 
-const ACTIVITY_METRIC_IDS = ["steps", "sleep", "workoutWeight", "workoutCardio", "heartRateMin", "heartRateMax"];
-
 const LAB_DETAIL_SECTIONS = [
   {
     id: "cbc", label: "Complete Blood Count",
@@ -1225,7 +1223,7 @@ export default function App() {
           <Card>
             <div className="flex items-center gap-2 mb-4">
               {metric.Icon && <metric.Icon size={16} color={COLORS.primary} />}
-              <span className="text-lg font-semibold" style={{ color: ACTIVITY_METRIC_IDS.includes(metricDetailId) ? COLORS.primary : COLORS.ink, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
+              <span className="text-lg font-semibold" style={{ color: COLORS.primary, fontFamily: "'Space Grotesk', sans-serif" }}>{metric.label} history</span>
             </div>
 
             {runtime.data.length > 0 ? (
