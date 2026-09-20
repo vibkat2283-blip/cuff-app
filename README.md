@@ -1,4 +1,4 @@
-# Prevology
+# prevology
 
 Blood pressure & blood sugar tracker with doctor sharing, backed by Supabase.
 

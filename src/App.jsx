@@ -1036,7 +1036,7 @@ export default function App() {
             <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
               <Heart size={24} color="#fff" fill="#ffffff33" />
             </div>
-            <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.ink }} className="text-3xl">Prevology</h1>
+            <h1 style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, color: COLORS.ink }} className="text-3xl">prevology</h1>
             <p className="text-sm mt-2 text-center" style={{ color: COLORS.inkSoft }}>Log your readings. Share them with your doctor.</p>
           </div>
 
@@ -1312,7 +1312,7 @@ export default function App() {
               <div className="rounded-xl p-3.5" style={{ background: COLORS.surfaceAlt }}>
                 <span className="text-sm font-semibold block" style={{ color: COLORS.ink }}>Free plan</span>
                 <span className="text-xs block mt-1" style={{ color: COLORS.inkSoft }}>
-                  All features are available at no cost while Prevology is in testing. There's no paid plan or billing set up yet.
+                  All features are available at no cost while prevology is in testing. There's no paid plan or billing set up yet.
                 </span>
               </div>
             </div>
@@ -1343,7 +1343,7 @@ export default function App() {
             <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(155deg, ${COLORS.primarySoft}, ${COLORS.primary})` }}>
               <Heart size={16} color="#fff" fill="#ffffff33" />
             </div>
-            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: COLORS.primary }} className="text-xl">Prevology</span>
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 800, color: COLORS.primary }} className="text-xl">prevology</span>
           </div>
           <button
             onClick={handleBellClick}
@@ -1577,7 +1577,7 @@ export default function App() {
                 <p className="text-xs leading-relaxed" style={{ color: COLORS.inkSoft }}>
                   Apple Health data lives on your iPhone and Apple only allows native iOS apps to read it directly —
                   a website like this one can't connect to HealthKit on its own. "Connect" here marks your account as
-                  linked; to actually pull in steps, heart rate, sleep, and weight from Apple Health, Prevology needs a
+                  linked; to actually pull in steps, heart rate, sleep, and weight from Apple Health, prevology needs a
                   companion iOS app (or a sync service like Terra, Vital, or Spike) to bridge HealthKit data into your
                   readings. Until that's built, connecting here won't sync data automatically — you can still log
                   everything yourself from the Activity and Lab tabs.
